@@ -22,10 +22,13 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
   final _formKey = GlobalKey<FormState>();
 
   List<WorkoutLog> logs = [];
+
   bool isLoading = true;
   bool isSaving = false;
   late AnimationController _buttonAnimationController;
   late Animation<double> _buttonScaleAnimation;
+
+  late final recentLogs = logs.take(widget.exercise.totalSets).toList();
 
   @override
   void initState() {
@@ -55,15 +58,11 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
   Future<void> loadLogs() async {
     try {
       final data = await ApiService.getLogs(widget.exercise.id);
+      data.sort((a, b) => a.date.compareTo(b.date));
+
       setState(() {
         logs = data;
-        print('this is thelog for the sets <>list       $logs');
-        print('this is logs length: ${logs.length}');
-        print('ththis is the firstst: ${logs.first}');
-        print('this is logs first weight: ${logs.first.weight}');
-        print('this is logs first reps: ${logs.first.reps}');
-        print('this is logs first notes: ${logs.first.notes}');
-        print('this is the total sets: ${logs.first.totalSets}');
+
         isLoading = false;
       });
     } catch (e) {
@@ -241,7 +240,7 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
               Expanded(
                 child: _buildStatItem(
                   'Max Weight',
-                  '${maxWeight} kg',
+                  '$maxWeight kg',
                   Icons.emoji_events,
                 ),
               ),
@@ -337,7 +336,7 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 15),
                       Row(
                         children: [
                           Expanded(
@@ -466,15 +465,6 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const Spacer(),
-                  if (logs.isNotEmpty)
-                    Text(
-                      '${logs.length} sets',
-                      style: const TextStyle(
-                        color: Color(0xFF8A9B8A),
-                        fontSize: 14,
-                      ),
-                    ),
                 ],
               ),
 
@@ -526,13 +516,13 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
                         ),
                       )
                     : ListView.builder(
-                        itemCount: logs.length,
+                        itemCount: recentLogs.length,
                         itemBuilder: (context, index) {
                           final log = logs[index];
                           final isLatest = index == 0;
 
                           return Dismissible(
-                            key: Key(log.id),
+                            key: Key(recentLogs[index].id),
                             direction: DismissDirection.endToStart,
                             background: Container(
                               margin: const EdgeInsets.only(bottom: 12),
@@ -612,9 +602,11 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
                             },
                             onDismissed: (direction) async {
                               try {
-                                await ApiService.deleteLog(log.id);
+                                await ApiService.deleteLog(
+                                  recentLogs[index].id,
+                                );
                                 setState(() {
-                                  logs.removeAt(index);
+                                  recentLogs.removeAt(index);
                                 });
                                 HapticFeedback.mediumImpact();
                                 _showSuccessSnackBar('Workout log deleted');

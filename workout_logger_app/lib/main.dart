@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:workout_logger_app/screens/progress_chart_screen.dart';
-import 'package:workout_logger_app/screens/routine_progress_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {

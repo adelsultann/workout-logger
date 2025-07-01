@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void showAddRoutineDialog() {
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
 
     showDialog(
       context: context,
@@ -44,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFF1A2C1D),
         title: Text("New Routine", style: TextStyle(color: Colors.white)),
         content: TextField(
-          controller: _controller,
+          controller: controller,
           style: TextStyle(color: Colors.white),
           decoration: InputDecoration(
             hintText: "e.g., Pull Day",
@@ -62,7 +62,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Color(0xFF22FF7A)),
             onPressed: () async {
-              final name = _controller.text.trim();
+              final name = controller.text.trim();
               if (name.isEmpty) return;
 
               try {
