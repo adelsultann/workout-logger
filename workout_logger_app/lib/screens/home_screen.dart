@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:workout_logger_app/screens/routine_detail_screen.dart';
+import 'package:overload_pro_app/screens/routine_detail_screen.dart';
 import '../models/routine.dart';
 import '../services/api_service.dart';
 import '../widgets/bottom_nav_bar.dart';

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "708834972189",
+    "project_id": "workoutlogger-712b0",
+    "storage_bucket": "workoutlogger-712b0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:708834972189:android:ae813ebf837bdf7941ecf4",
+        "android_client_info": {
+          "package_name": "app.overloadpro.overloadproapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAWcKl29kphPfjkI9eN-ud6Ukto71CeznE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

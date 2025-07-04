@@ -1,44 +1,67 @@
+/*
+ * android/app/build.gradle.kts
+ * Works with Flutter + Firebase (Kotlin DSL)
+ */
+
 plugins {
+    // Android & Kotlin plugins
     id("com.android.application")
-    id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id("org.jetbrains.kotlin.android")
+
+    // Flutter plugin (must come AFTER the Android/Kotlin plugins)
     id("dev.flutter.flutter-gradle-plugin")
+
+    // Google Services (Firebase) plugin
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.workout_logger_app"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973"
+    namespace = "app.overloadpro.overloadproapp"
 
+    compileSdk = flutter.compileSdkVersion      // resolved from Flutter
+    ndkVersion  = flutter.ndkVersion
+
+    defaultConfig {
+        compileSdk = 35
+        ndkVersion = "27.0.12077973" // Add or update this line
+        applicationId = "app.overloadpro.overloadproapp"
+        minSdk        = 27
+        targetSdk     = flutter.targetSdkVersion
+        versionCode   = flutter.versionCode
+        versionName   = flutter.versionName
+    }
+
+    // Java 11 / Kotlin 11
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-
-    defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.workout_logger_app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
-    }
+    kotlinOptions { jvmTarget = JavaVersion.VERSION_11.toString() }
 
     buildTypes {
-        release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+        // Keep release simple for now
+        getByName("release") {
+            isMinifyEnabled     = false
+            isShrinkResources   = false
+            signingConfig       = signingConfigs.getByName("debug")
         }
     }
 }
 
 flutter {
+    // path back to <project root>/lib
     source = "../.."
 }
+
+dependencies {
+    // --- Firebase BoM (version catalog) ---
+    implementation(platform("com.google.firebase:firebase-bom:33.16.0"))
+
+    // --- Firebase products you need ---
+    implementation("com.google.firebase:firebase-analytics") // basic analytics
+    implementation("com.google.firebase:firebase-auth")      // remove if not using Auth
+    // implementation("com.google.firebase:firebase-firestore") // add more as needed
+}
+
+// MUST be at bottom when using Kotlin DSL
+apply(plugin = "com.google.gms.google-services")

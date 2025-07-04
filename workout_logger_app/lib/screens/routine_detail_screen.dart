@@ -1,8 +1,8 @@
 // DESIGN NOTE: Added for potential future use with formatting (e.g., 'package:intl/intl.dart')
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:workout_logger_app/screens/log_workout_screen.dart';
-import 'package:workout_logger_app/screens/routine_progress_screen.dart';
+import 'package:overload_pro_app/screens/log_workout_screen.dart';
+import 'package:overload_pro_app/screens/routine_progress_screen.dart';
 import '../models/routine.dart';
 import '../models/exercise.dart';
 import '../services/api_service.dart';

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:workout_logger_app/models/workout_log.dart';
+import 'package:overload_pro_app/models/workout_log.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 
@@ -207,7 +207,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${latestValue.toStringAsFixed(1)}',
+                latestValue.toStringAsFixed(1),
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,

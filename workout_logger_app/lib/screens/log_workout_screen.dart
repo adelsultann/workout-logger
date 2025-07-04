@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:workout_logger_app/models/workout_log.dart';
+import 'package:overload_pro_app/models/workout_log.dart';
 import '../models/exercise.dart';
 
 import '../services/api_service.dart';

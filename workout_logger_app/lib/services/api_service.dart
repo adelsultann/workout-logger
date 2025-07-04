@@ -8,6 +8,8 @@ class ApiService {
   static const baseUrl =
       'http://10.0.2.2:5000/api'; // Use 10.0.2.2 for Android emulator
 
+  //'http://192.168.2.130:5000/api'; // Use for real device
+
   static Future<List<Routine>> getRoutines(String userId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/routines?userId=$userId'),
