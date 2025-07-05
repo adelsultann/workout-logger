@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:overload_pro_app/screens/routine_detail_screen.dart';
@@ -24,7 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> loadRoutines() async {
     try {
-      final data = await ApiService.getRoutines('user123'); // Temporary userId
+      final data = await ApiService.getRoutines();
 
       setState(() {
         routines = data;
@@ -66,7 +67,7 @@ class _HomeScreenState extends State<HomeScreen> {
               if (name.isEmpty) return;
 
               try {
-                final newRoutine = await ApiService.addRoutine('user123', name);
+                final newRoutine = await ApiService.addRoutine(name);
                 setState(() {
                   routines.add(newRoutine);
                 });
@@ -93,12 +94,6 @@ class _HomeScreenState extends State<HomeScreen> {
           'Welcome back, Adel',
           style: GoogleFonts.inter(color: Colors.white),
         ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -232,7 +227,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushReplacementNamed(context, '/progress');
               break;
             case 2:
-              // Navigator.pushReplacementNamed(context, '/calendar');
+              Navigator.pushReplacementNamed(context, '/settings');
               break;
             case 3:
               // Navigator.pushReplacementNamed(context, '/profile');

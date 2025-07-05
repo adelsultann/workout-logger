@@ -1,18 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const WorkoutLog = require('../models/WorkoutLog');
-const Exercise = require('../models/Exercise'); // make sure it's imported
+const Exercise = require('../models/Exercise');
+const auth = require('../middleware/firebaseAuth');
+
 // Log a new workout set
-router.post('/', async (req, res) => {
+router.post('/',auth, async (req, res) => {
      try {
-       const { userId, exerciseId, weight, reps, date, notes } = req.body;
+       const {  exerciseId, weight, reps, date, notes } = req.body;
    
        // Fetch the exercise to get totalSets
        const exercise = await Exercise.findById(exerciseId);
        if (!exercise) return res.status(404).json({ error: 'Exercise not found' });
    
        const log = new WorkoutLog({
-         userId,
+        // this is the authenticated user from firebase,
+         userId: req.uid,
          exerciseId,
          weight,
          reps,
@@ -32,7 +35,7 @@ router.post('/', async (req, res) => {
 
 
 // Get all workout logs
-router.get('/', async (req, res) => {
+router.get('/', auth ,async (req, res) => {
      try {
        const logs = await WorkoutLog.find().sort({ date: 1 }); // ascending by date
        res.status(200).json(logs);
@@ -43,7 +46,7 @@ router.get('/', async (req, res) => {
    
 
 // Get all logs for a specific exercise
-router.get('/:exerciseId', async (req, res) => {
+router.get('/:exerciseId' , auth , async (req, res) => {
   try {
     const { exerciseId } = req.params;
     const logs = await WorkoutLog.find({ exerciseId }).sort({ date: 1 });
@@ -54,7 +57,7 @@ router.get('/:exerciseId', async (req, res) => {
 });
 
 // Get progress summary for an exercise
-router.get('/progress/:exerciseId', async (req, res) => {
+router.get('/progress/:exerciseId',auth, async (req, res) => {
   try {
     const { exerciseId } = req.params;
     const logs = await WorkoutLog.find({ exerciseId }).sort({ date: 1 });

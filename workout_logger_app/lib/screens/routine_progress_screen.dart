@@ -238,22 +238,12 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
     );
   }
 
+  // Replace your existing _buildChart method with this corrected version
+
   Widget _buildChart() {
     final logs = _getFilteredLogs();
-
-    // Calculate dynamic height based on screen size
     final screenHeight = MediaQuery.of(context).size.height;
-    final appBarHeight = AppBar().preferredSize.height;
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-
-    // Calculate available height and use it for chart
-    final availableHeight =
-        screenHeight - appBarHeight - statusBarHeight - bottomPadding;
-    final chartHeight = (availableHeight * 0.5).clamp(
-      300.0,
-      500.0,
-    ); // 50% of available height, min 300, max 500
+    final chartHeight = (screenHeight * 0.4).clamp(250.0, 400.0);
 
     if (logs.isEmpty) {
       return Container(
@@ -292,13 +282,41 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
         )
         .toList();
 
-    // Calculate min and max values for better chart scaling
+    // --- START OF THE FIX ---
+
     final values = spots.map((spot) => spot.y).toList();
     final minValue = values.reduce((a, b) => a < b ? a : b);
     final maxValue = values.reduce((a, b) => a > b ? a : b);
-    final padding = (maxValue - minValue) * 0.1;
 
-    // Calculate better intervals for X-axis labels
+    double finalMinY;
+    double finalMaxY;
+    double horizontalInterval;
+    double leftTitleInterval;
+
+    // Check if all data points are the same
+    if (minValue == maxValue) {
+      // If so, create a default visible range
+      finalMinY = minValue - 5; // Give 5 units of space below
+      finalMaxY = maxValue + 5; // Give 5 units of space above
+      // Set a sensible default interval to prevent it from being zero
+      horizontalInterval = 2.5;
+      leftTitleInterval = 2.5;
+    } else {
+      // If data points differ, use the original dynamic calculation
+      final range = maxValue - minValue;
+      final padding = range * 0.1; // 10% padding
+      finalMinY = minValue - padding;
+      finalMaxY = maxValue + padding;
+      horizontalInterval = range / 4; // Divide the range into 4 grid lines
+      leftTitleInterval = range / 4;
+    }
+
+    // Ensure interval is never zero, as a final safeguard.
+    if (horizontalInterval == 0) horizontalInterval = 1;
+    if (leftTitleInterval == 0) leftTitleInterval = 1;
+
+    // --- END OF THE FIX ---
+
     int getXAxisInterval() {
       if (logs.length <= 5) return 1;
       if (logs.length <= 10) return 2;
@@ -317,33 +335,25 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
       ),
       child: LineChart(
         LineChartData(
-          minY: minValue - padding,
-          maxY: maxValue + padding,
+          minY: finalMinY, // Use the safe value
+          maxY: finalMaxY, // Use the safe value
           gridData: FlGridData(
             show: true,
             drawVerticalLine: true,
             drawHorizontalLine: true,
             verticalInterval: getXAxisInterval().toDouble(),
-            horizontalInterval: (maxValue - minValue) / 4,
-            getDrawingVerticalLine: (value) {
-              return FlLine(
-                color: Colors.white.withOpacity(0.05),
-                strokeWidth: 1,
-              );
-            },
-            getDrawingHorizontalLine: (value) {
-              return FlLine(
-                color: Colors.white.withOpacity(0.1),
-                strokeWidth: 1,
-              );
-            },
+            horizontalInterval: horizontalInterval, // Use the safe value
+            getDrawingVerticalLine: (value) =>
+                FlLine(color: Colors.white.withOpacity(0.05), strokeWidth: 1),
+            getDrawingHorizontalLine: (value) =>
+                FlLine(color: Colors.white.withOpacity(0.1), strokeWidth: 1),
           ),
           titlesData: FlTitlesData(
             show: true,
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 50, // Increased for more space
+                reservedSize: 50,
                 interval: getXAxisInterval().toDouble(),
                 getTitlesWidget: (value, meta) {
                   final index = value.toInt();
@@ -352,7 +362,6 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                     final dateStr = DateFormat(
                       _getDateFormat(),
                     ).format(log.date);
-                    final isWeight = showWeight[selectedExerciseName]!;
                     final valueStr = isWeight
                         ? '${log.weight.toStringAsFixed(1)}kg'
                         : '${log.reps} reps';
@@ -391,8 +400,12 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 50,
-                interval: (maxValue - minValue) / 4,
+                interval: leftTitleInterval, // Use the safe value
                 getTitlesWidget: (value, meta) {
+                  // Don't show the min value label to avoid overlap with bottom titles
+                  if (value == finalMinY) {
+                    return const SizedBox();
+                  }
                   return Text(
                     value.toStringAsFixed(0),
                     style: const TextStyle(
@@ -404,8 +417,12 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                 },
               ),
             ),
-            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
           ),
           borderData: FlBorderData(show: false),
           lineBarsData: [
@@ -417,21 +434,19 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
               color: const Color(0xFF22FF7A),
               dotData: FlDotData(
                 show: true,
-                getDotPainter: (spot, percent, barData, index) {
-                  return FlDotCirclePainter(
-                    radius: 4,
-                    color: const Color(0xFF22FF7A),
-                    strokeWidth: 2,
-                    strokeColor: Colors.white,
-                  );
-                },
+                getDotPainter: (spot, percent, barData, index) =>
+                    FlDotCirclePainter(
+                      radius: 4,
+                      color: const Color(0xFF22FF7A),
+                      strokeWidth: 2,
+                      strokeColor: Colors.white,
+                    ),
               ),
               belowBarData: BarAreaData(
                 show: true,
                 gradient: LinearGradient(
                   colors: [
                     const Color(0xFF22FF7A).withOpacity(0.3),
-                    const Color(0xFF22FF7A).withOpacity(0.1),
                     Colors.transparent,
                   ],
                   begin: Alignment.topCenter,

@@ -1,17 +1,20 @@
-// DESIGN NOTE: Added for potential future use with formatting (e.g., 'package:intl/intl.dart')
+// DESIGN NOTE: Removed unused packages & fixed naming inconsistencies.
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:overload_pro_app/screens/log_workout_screen.dart';
 import 'package:overload_pro_app/screens/routine_progress_screen.dart';
-import '../models/routine.dart';
+import 'package:overload_pro_app/services/firebasUpgrade.dart';
+import 'package:overload_pro_app/utils/usage_counter.dart';
+
 import '../models/exercise.dart';
+import '../models/routine.dart';
 import '../services/api_service.dart';
 
 class RoutineDetailScreen extends StatefulWidget {
   final Routine routine;
-
   const RoutineDetailScreen({super.key, required this.routine});
-
   @override
   State<RoutineDetailScreen> createState() => _RoutineDetailScreenState();
 }
@@ -36,130 +39,378 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
         });
       }
     } catch (e) {
-      print('Error loading exercises: $e');
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      debugPrint('Error loading exercises: $e');
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
+  /* --------------------------- UPGRADE DIALOG --------------------------- */
+  void _maybeShowSignupDialog(BuildContext ctx) async {
+    final firstLaunchCount = await UsageCounter.getExerciseCount();
+    if (firstLaunchCount < 1) return; // prompt after 4 exercises only
+
+    showDialog(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final emailCtrl = TextEditingController();
+        final passCtrl = TextEditingController();
+        final formKey = GlobalKey<FormState>();
+
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2C1D), // Darker, modern background
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Save Your Progress',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Subtitle explaining the benefit of signing up
+              const Text(
+                "Create a free account so you don't lose your workout history. 📈",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF8A9B8A), fontSize: 15),
+              ),
+              const SizedBox(height: 24),
+              Form(
+                key: formKey,
+                child: Column(
+                  children: [
+                    // Improved Email TextField
+                    TextFormField(
+                      controller: emailCtrl,
+                      style: const TextStyle(color: Colors.white),
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
+                        filled: true,
+                        fillColor: const Color(0xFF2C2C2E),
+                        prefixIcon: const Icon(
+                          Icons.email_outlined,
+                          color: Color(0xFF8A9B8A),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || !value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    // Improved Password TextField
+                    TextFormField(
+                      controller: passCtrl,
+                      obscureText: true,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
+                        filled: true,
+                        fillColor: const Color(0xFF2C2C2E),
+                        prefixIcon: const Icon(
+                          Icons.lock_outline,
+                          color: Color(0xFF8A9B8A),
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actionsPadding: const EdgeInsets.only(
+            left: 24,
+            right: 24,
+            bottom: 24,
+            top: 10,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            // Using a wider column for better button layout
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Primary action button
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF22FF7A),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (!(formKey.currentState?.validate() ?? false)) return;
+
+                    try {
+                      await upgradeAnonymousAccount(
+                        email: emailCtrl.text.trim(),
+                        password: passCtrl.text.trim(),
+                      );
+
+                      // Stop prompting after successful signup
+                      await UsageCounter.resetExerciseCount();
+
+                      if (dialogContext.mounted) Navigator.pop(dialogContext);
+
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(
+                          content: Text('Account created successfully! 🎉'),
+                          backgroundColor: Color(0xFF22FF7A),
+                        ),
+                      );
+                    } on FirebaseAuthException catch (e) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text(e.message ?? 'An error occurred.'),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(content: Text('Signup failed: $e')),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Create Free Account',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Secondary "Later" button
+                TextButton(
+                  child: const Text(
+                    'Maybe Later',
+                    style: TextStyle(color: Color(0xFF8A9B8A)),
+                  ),
+                  onPressed: () async {
+                    // Reset counter so it doesn't prompt again immediately
+                    await UsageCounter.resetExerciseCount();
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /* --------------------------- ADD EXERCISE DIALOG --------------------------- */
   void _showAddExerciseDialog() {
-    final TextEditingController nameController = TextEditingController();
-    final TextEditingController setController = TextEditingController();
-    final formKey = GlobalKey<FormState>(); // Add form key for validation
+    final nameCtrl = TextEditingController();
+    final setCtrl = TextEditingController();
+    final formKey = GlobalKey<FormState>(); // Key for validation
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1A2C1D), // Modern dark background
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: const Color(0xFF1A2C1D),
         title: const Text(
-          "Add Exercise",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "e.g., Barbell Row",
-                hintStyle: const TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF22FF7A)),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: setController,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: "Total sets",
-                hintStyle: const TextStyle(color: Colors.white54),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF22FF7A)),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            child: const Text(
-              "Cancel",
-              style: TextStyle(color: Colors.white70),
-            ),
-            onPressed: () => Navigator.pop(context),
+          'Add New Exercise',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF22FF7A),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+        ),
+        content: Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Subtitle for better context
+              const Text(
+                'Enter the details for your new exercise.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Color(0xFF8A9B8A), fontSize: 15),
               ),
-            ),
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final setCount = int.parse(setController.text.trim());
-              if (name.isEmpty || setCount <= 0) return;
-              Navigator.pop(context);
-              try {
-                final newExercise = await ApiService.addExercise(
-                  widget.routine.id,
-                  name,
-                  setCount,
-                );
-                setState(() => exercises.add(newExercise));
-              } catch (e) {
-                print('Failed to add exercise: $e');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Failed to add exercise. Please try again.'),
+              const SizedBox(height: 24),
+              // Improved Exercise Name TextFormField
+              TextFormField(
+                controller: nameCtrl,
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Exercise Name',
+                  labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
+                  filled: true,
+                  fillColor: const Color(0xFF2C2C2E),
+                  prefixIcon: const Icon(
+                    Icons.fitness_center_outlined,
+                    color: Color(0xFF8A9B8A),
                   ),
-                );
-              }
-            },
-            child: const Text(
-              "Add",
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter an exercise name';
+                  }
+                  return null;
+                },
               ),
-            ),
+              const SizedBox(height: 16),
+              // Improved Total Sets TextFormField
+              TextFormField(
+                controller: setCtrl,
+                style: const TextStyle(color: Colors.white),
+                keyboardType: TextInputType.number,
+                // Restrict input to numbers only
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: 'Total Sets',
+                  labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
+                  filled: true,
+                  fillColor: const Color(0xFF2C2C2E),
+                  prefixIcon: const Icon(
+                    Icons.format_list_numbered,
+                    color: Color(0xFF8A9B8A),
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Please enter the number of sets';
+                  }
+                  final setCount = int.tryParse(value);
+                  if (setCount == null || setCount <= 0) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 10, 24, 24),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Primary "Add" button
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22FF7A),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () async {
+                  // Validate the form before proceeding
+                  if (!formKey.currentState!.validate()) {
+                    return;
+                  }
+
+                  final name = nameCtrl.text.trim();
+                  final setCount = int.parse(setCtrl.text.trim());
+
+                  // Close dialog first for a smoother UX
+                  Navigator.pop(dialogContext);
+
+                  try {
+                    final newExercise = await ApiService.addExercise(
+                      widget.routine.id,
+                      name,
+                      setCount,
+                    );
+                    setState(() => exercises.add(newExercise));
+
+                    // Check if the signup dialog should be shown
+                    final count = await UsageCounter.incrementExerciseCount();
+                    if (mounted && count >= 1) {
+                      _maybeShowSignupDialog(context);
+                    }
+                  } catch (e) {
+                    debugPrint('Failed to add exercise: $e');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Failed to add exercise.'),
+                          backgroundColor: Colors.redAccent,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: const Text(
+                  'Add Exercise',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              // Secondary "Cancel" button
+              TextButton(
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Color(0xFF8A9B8A)),
+                ),
+                onPressed: () => Navigator.pop(dialogContext),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  void _navigateToProgress() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => RoutineProgressScreen(
-          routineId: widget.routine.id,
-          routineName: widget.routine.name,
-        ),
+  /* --------------------------- NAVIGATION --------------------------- */
+  void _goToProgress() => Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => RoutineProgressScreen(
+        routineId: widget.routine.id,
+        routineName: widget.routine.name,
       ),
-    );
-  }
+    ),
+  );
+  void _goToLog(Exercise ex) => Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => LogWorkoutScreen(exercise: ex)),
+  );
 
-  void _navigateToLogWorkout(Exercise exercise) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => LogWorkoutScreen(exercise: exercise)),
-    );
-  }
-
+  /* --------------------------- UI --------------------------- */
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -176,78 +427,50 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 22,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.white, size: 28),
+            icon: const Icon(Icons.add),
             onPressed: _showAddExerciseDialog,
-            tooltip: 'Add Exercise',
           ),
-          const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF22FF7A),
-        onPressed: _navigateToProgress,
-        tooltip: 'View Progress',
-        child: const Icon(Icons.bar_chart, color: Colors.black, size: 28),
+        onPressed: _goToProgress,
+        child: const Icon(Icons.bar_chart, color: Colors.black),
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF22FF7A)),
-                  )
-                : exercises.isEmpty
-                ? const Center(
-                    child: Text(
-                      "No exercises in this routine.\nTap the '+' to add one!",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white54,
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    itemCount: exercises.length,
-                    itemBuilder: (context, index) {
-                      final ex = exercises[index];
-                      return _ExerciseCard(
-                        exercise: ex,
-                        onTap: () => _navigateToLogWorkout(ex),
-                        onDismissed: () async {
-                          try {
-                            await ApiService.deleteExercise(ex.id);
-                            setState(() => exercises.removeAt(index));
-                          } catch (e) {
-                            print("Error deleting exercise: $e");
-                            setState(() => exercises.insert(index, ex));
-                          }
-                        },
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : exercises.isEmpty
+          ? const Center(
+              child: Text(
+                'No exercises yet',
+                style: TextStyle(color: Colors.white54),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: exercises.length,
+              itemBuilder: (_, i) => _ExerciseCard(
+                exercise: exercises[i],
+                onTap: () => _goToLog(exercises[i]),
+                onDismissed: () async {
+                  await ApiService.deleteExercise(exercises[i].id);
+                  if (mounted) setState(() => exercises.removeAt(i));
+                },
+              ),
+            ),
     );
   }
 }
 
+/* --------------------------- EXERCISE CARD WIDGET --------------------------- */
 class _ExerciseCard extends StatelessWidget {
   final Exercise exercise;
   final VoidCallback onTap;
   final VoidCallback onDismissed;
-
   const _ExerciseCard({
     required this.exercise,
     required this.onTap,
@@ -260,103 +483,52 @@ class _ExerciseCard extends StatelessWidget {
       key: Key(exercise.id),
       direction: DismissDirection.endToStart,
       background: Container(
+        alignment: Alignment.centerRight,
         margin: const EdgeInsets.symmetric(vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
           color: Colors.red.withOpacity(0.8),
           borderRadius: BorderRadius.circular(12),
         ),
-        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: const Icon(Icons.delete, color: Colors.white),
       ),
-      confirmDismiss: (direction) async {
-        return await showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+      confirmDismiss: (_) async => await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          backgroundColor: const Color(0xFF1A2C1D),
+          title: const Text('Delete?', style: TextStyle(color: Colors.white)),
+          actions: [
+            TextButton(
+              child: const Text('Cancel'),
+              onPressed: () => Navigator.pop(context, false),
             ),
-            backgroundColor: const Color(0xFF1A2C1D),
-            title: const Text(
-              "Delete Exercise",
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
+            ElevatedButton(
+              child: const Text('Delete'),
+              onPressed: () => Navigator.pop(context, true),
             ),
-            content: const Text(
-              "Are you sure? This action cannot be undone.",
-              style: TextStyle(color: Colors.white70),
-            ),
-            actions: [
-              TextButton(
-                child: const Text(
-                  "Cancel",
-                  style: TextStyle(color: Colors.white70),
-                ),
-                onPressed: () => Navigator.pop(context, false),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.withOpacity(0.9),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  "Delete",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+          ],
+        ),
+      ),
       onDismissed: (_) => onDismissed(),
       child: Card(
-        margin: const EdgeInsets.symmetric(vertical: 6),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: const Color(0xFF1A2C1D),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        exercise.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "Total Sets: ${exercise.totalSets ?? 'N/A'}",
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  CupertinoIcons.chevron_forward,
-                  color: Colors.white.withOpacity(0.5),
-                ),
-              ],
+          title: Text(
+            exercise.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
             ),
+          ),
+          subtitle: Text(
+            'Total Sets: ${exercise.totalSets}',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          trailing: Icon(
+            CupertinoIcons.chevron_forward,
+            color: Colors.white.withOpacity(0.6),
           ),
         ),
       ),

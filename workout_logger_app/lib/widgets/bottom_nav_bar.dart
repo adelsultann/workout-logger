@@ -27,10 +27,7 @@ class BottomNavBar extends StatelessWidget {
           icon: Icon(Icons.fitness_center),
           label: 'Progress',
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.calendar_today),
-          label: 'Calendar',
-        ),
+
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

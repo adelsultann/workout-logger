@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const Routine = require('../models/Routine');
+const auth = require('../middleware/firebaseAuth');
+
 
 // Create a routine
-router.post('/', async (req, res) => {
+router.post('/',auth, async (req, res) => {
   try {
-    const { userId, name } = req.body;
-    const newRoutine = new Routine({ userId, name });
+    const {  name } = req.body;
+    const newRoutine = new Routine({ userId: req.uid, name });
     const saved = await newRoutine.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -17,11 +19,11 @@ router.post('/', async (req, res) => {
 // Get all routines for a user
 router.get('/', async (req, res) => {
   try {
-    const { userId } = req.query;
-    const routines = await Routine.find({ userId });
+    const routines = await Routine.find({ userId: req.uid }).sort({ createdAt: -1 });
     res.status(200).json(routines);
   } catch (err) {
-    res.status(500).json({ error: 'Failed to get routines' });
+    console.error(err);
+    res.status(500).json({ error: 'Failed to load routines' });
   }
 });
 

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Exercise = require('../models/Exercise');
-
+const auth = require('../middleware/firebaseAuth');
 // Add an exercise to a routine
 router.post('/', async (req, res) => {
   try {

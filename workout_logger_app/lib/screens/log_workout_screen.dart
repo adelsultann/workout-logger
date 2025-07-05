@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart'; // Make sure you have this package
 import 'package:overload_pro_app/models/workout_log.dart';
 import '../models/exercise.dart';
-
 import '../services/api_service.dart';
 
 class LogWorkoutScreen extends StatefulWidget {
@@ -14,135 +14,159 @@ class LogWorkoutScreen extends StatefulWidget {
   State<LogWorkoutScreen> createState() => _LogWorkoutScreenState();
 }
 
-class _LogWorkoutScreenState extends State<LogWorkoutScreen>
-    with TickerProviderStateMixin {
-  final TextEditingController _weightController = TextEditingController();
-  final TextEditingController _repsController = TextEditingController();
-  final TextEditingController _notesController = TextEditingController();
+class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _weightController = TextEditingController();
+  final _repsController = TextEditingController();
+  final _notesController = TextEditingController();
 
-  List<WorkoutLog> logs = [];
-
-  bool isLoading = true;
-  bool isSaving = false;
-  late AnimationController _buttonAnimationController;
-  late Animation<double> _buttonScaleAnimation;
-
-  late final recentLogs = logs.take(widget.exercise.totalSets).toList();
+  List<WorkoutLog> _logs = [];
+  bool _isLoading = true;
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _buttonAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 150),
-      vsync: this,
-    );
-    _buttonScaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(
-        parent: _buttonAnimationController,
-        curve: Curves.easeInOut,
-      ),
-    );
-    loadLogs();
+    _loadLogs();
   }
 
   @override
   void dispose() {
-    _buttonAnimationController.dispose();
     _weightController.dispose();
     _repsController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  Future<void> loadLogs() async {
+  // --- Data Handling ---
+
+  Future<void> _loadLogs() async {
     try {
       final data = await ApiService.getLogs(widget.exercise.id);
-      data.sort((a, b) => a.date.compareTo(b.date));
-
+      data.sort((a, b) => b.date.compareTo(a.date)); // Sort newest to oldest
       setState(() {
-        logs = data;
-
-        isLoading = false;
+        _logs = data;
+        _isLoading = false;
       });
     } catch (e) {
       _showErrorSnackBar('Failed to load workout history');
-      setState(() {
-        isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
-  Future<void> submitLog() async {
+  Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Haptic feedback
     HapticFeedback.lightImpact();
-
-    setState(() {
-      isSaving = true;
-    });
-
-    final weight = double.parse(_weightController.text.trim());
-    final reps = int.parse(_repsController.text.trim());
-    final notes = _notesController.text.trim();
+    setState(() => _isSaving = true);
 
     try {
       final newLog = await ApiService.addLog(
-        userId: 'user123',
         exerciseId: widget.exercise.id,
-        weight: weight,
-        reps: reps,
-        notes: notes.isEmpty ? null : notes,
+        weight: double.parse(_weightController.text.trim()),
+        reps: int.parse(_repsController.text.trim()),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
       );
 
       setState(() {
-        logs.insert(0, newLog); // Add to top for chronological order
+        _logs.insert(0, newLog);
+        _isSaving = false;
+        _formKey.currentState?.reset();
         _weightController.clear();
         _repsController.clear();
         _notesController.clear();
-        isSaving = false;
+        FocusScope.of(context).unfocus();
       });
 
       _showSuccessSnackBar('Workout logged successfully!');
     } catch (e) {
-      setState(() {
-        isSaving = false;
-      });
+      setState(() => _isSaving = false);
       _showErrorSnackBar('Failed to save workout log');
     }
   }
 
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
-        ),
-        backgroundColor: const Color(0xFF22FF7A),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  // --- NEW: Handle Log Deletion ---
+  Future<void> _deleteLog(String logId) async {
+    try {
+      await ApiService.deleteLog(logId);
+      setState(() {
+        _logs.removeWhere((log) => log.id == logId);
+      });
+      HapticFeedback.mediumImpact();
+      _showSuccessSnackBar('Log deleted successfully');
+    } catch (e) {
+      _showErrorSnackBar('Failed to delete log');
+    }
   }
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 8),
-            Text(message),
-          ],
+  // --- UI Widgets ---
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF1C1C1E),
+      appBar: AppBar(
+        title: Text(
+          widget.exercise.name,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        backgroundColor: Colors.red[600],
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        backgroundColor: const Color(0xFF1C1C1E),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 16),
+              _buildInputField(
+                controller: _weightController,
+                label: 'Weight (kg)',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildInputField(
+                controller: _repsController,
+                label: 'Reps',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              _buildInputField(
+                controller: _notesController,
+                label: 'Notes (optional)',
+                isOptional: true,
+                maxLines: 3,
+              ),
+              const SizedBox(height: 32),
+              _buildSaveButton(),
+              const SizedBox(height: 48),
+              const Text(
+                'Recent Logs',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildLogsList(),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -150,585 +174,232 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
   Widget _buildInputField({
     required TextEditingController controller,
     required String label,
-    required IconData icon,
     TextInputType? keyboardType,
-    String? Function(String?)? validator,
+    bool isOptional = false,
     int maxLines = 1,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2C1D),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF2A3D2E), width: 1),
-      ),
-      child: TextFormField(
-        controller: controller,
-        style: const TextStyle(color: Colors.white, fontSize: 16),
-        keyboardType: keyboardType,
-        maxLines: maxLines,
-        validator: validator,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
-          prefixIcon: Icon(icon, color: const Color(0xFF22FF7A), size: 20),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 16,
-          ),
-          floatingLabelBehavior: FloatingLabelBehavior.auto,
+    return TextFormField(
+      controller: controller,
+      style: const TextStyle(color: Colors.white, fontSize: 16),
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      validator: (value) {
+        if (!isOptional && (value == null || value.isEmpty)) {
+          return 'This field is required';
+        }
+        if (keyboardType != null &&
+            value != null &&
+            value.isNotEmpty &&
+            double.tryParse(value) == null) {
+          return 'Please enter a valid number';
+        }
+        return null;
+      },
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
+        filled: true,
+        fillColor: const Color(0xFF2C2C2E),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF22FF7A), width: 1.5),
         ),
       ),
     );
   }
 
-  Widget _buildStatsCard() {
-    if (logs.isEmpty) return const SizedBox.shrink();
-
-    final lastLog = logs.first;
-    final totalSets = widget.exercise.totalSets;
-    final maxWeight = logs
-        .map((log) => log.weight)
-        .reduce((a, b) => a > b ? a : b);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF1A2C1D), Color(0xFF0F1E13)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget _buildSaveButton() {
+    return SizedBox(
+      height: 50,
+      child: ElevatedButton(
+        onPressed: _isSaving ? null : _submitLog,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF22FF7A),
+          disabledBackgroundColor: const Color(0xFF22FF7A).withOpacity(0.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF22FF7A).withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: const Color(0xFF22FF7A), size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Your Progress',
+        child: _isSaving
+            ? const SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                ),
+              )
+            : const Text(
+                'Save Log',
                 style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+      ),
+    );
+  }
+
+  /// Builds the list of recent workout logs.
+  Widget _buildLogsList() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF22FF7A)),
+      );
+    }
+
+    // --- MODIFIED: Limit the list based on totalSets ---
+    final displayLogs = _logs.take(widget.exercise.totalSets).toList();
+
+    if (displayLogs.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 40.0),
+          child: Text(
+            'No logs yet. Save your first set!',
+            style: TextStyle(color: Color(0xFF8A9B8A), fontSize: 16),
+          ),
+        ),
+      );
+    }
+    return ListView.builder(
+      itemCount: displayLogs.length,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemBuilder: (context, index) {
+        final log = displayLogs[index];
+        final setNumber = displayLogs.length - index;
+
+        // --- MODIFIED: Wrapped log item in a Dismissible for deletion ---
+        return Dismissible(
+          key: Key(log.id),
+          direction: DismissDirection.endToStart,
+          onDismissed: (_) => _deleteLog(log.id),
+          confirmDismiss: (_) => _showDeleteConfirmationDialog(),
+          background: _buildDismissibleBackground(),
+          child: _buildLogItem(log, setNumber),
+        );
+      },
+    );
+  }
+
+  /// Builds a single log item card.
+  Widget _buildLogItem(WorkoutLog log, int setNumber) {
+    return Container(
+      // Added a background color to prevent UI issues during dismissal
+      color: const Color(0xFF1C1C1E),
+      padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                DateFormat('MMMM d, yyyy').format(log.date.toLocal()),
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 4),
+              Text(
+                '${log.weight} kg ⋅ ${log.reps} reps',
+                style: const TextStyle(color: Color(0xFF8A9B8A), fontSize: 14),
+              ),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatItem(
-                  'Last Weight',
-                  '${lastLog.weight} kg',
-                  Icons.fitness_center,
-                ),
-              ),
-              Expanded(
-                child: _buildStatItem(
-                  'Total Sets',
-                  '$totalSets',
-                  Icons.format_list_numbered,
-                ),
-              ),
-              Expanded(
-                child: _buildStatItem(
-                  'Max Weight',
-                  '$maxWeight kg',
-                  Icons.emoji_events,
-                ),
-              ),
-            ],
+          Text(
+            'Set $setNumber',
+            style: const TextStyle(
+              color: Color(0xFF8A9B8A),
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF8A9B8A), size: 16),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Color(0xFF8A9B8A), fontSize: 12),
-        ),
-      ],
+  // --- NEW: Helper widgets for deletion ---
+
+  /// Builds the red background that appears when swiping to delete.
+  Widget _buildDismissibleBackground() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: Colors.red.shade400,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Icon(Icons.delete, color: Colors.white),
+          SizedBox(width: 8),
+          Text('Delete', style: TextStyle(color: Colors.white)),
+        ],
+      ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F1E13),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+  /// Shows a confirmation dialog before deleting a log.
+  Future<bool?> _showDeleteConfirmationDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF2C2C2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Delete Log?', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: Color(0xFF8A9B8A)),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.exercise.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            Text(
-              'Log your workout',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
-                fontSize: 14,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ],
-        ),
-        toolbarHeight: 80,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Stats Card
-              _buildStatsCard(),
-
-              // Form Section
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A2C1D).withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFF2A3D2E)),
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'New Set',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 15),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInputField(
-                              controller: _weightController,
-                              label: 'Weight (kg)',
-                              icon: Icons.fitness_center,
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                    decimal: true,
-                                  ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Required';
-                                }
-                                if (double.tryParse(value) == null) {
-                                  return 'Invalid number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: _buildInputField(
-                              controller: _repsController,
-                              label: 'Reps',
-                              icon: Icons.repeat,
-                              keyboardType: TextInputType.number,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Required';
-                                }
-                                if (int.tryParse(value) == null) {
-                                  return 'Invalid number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      _buildInputField(
-                        controller: _notesController,
-                        label: 'Notes (optional)',
-                        icon: Icons.note_alt_outlined,
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 24),
-                      ScaleTransition(
-                        scale: _buttonScaleAnimation,
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: isSaving
-                                ? null
-                                : () {
-                                    _buttonAnimationController.forward().then((
-                                      _,
-                                    ) {
-                                      _buttonAnimationController.reverse();
-                                    });
-                                    submitLog();
-                                  },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF22FF7A),
-                              disabledBackgroundColor: const Color(
-                                0xFF22FF7A,
-                              ).withOpacity(0.6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: isSaving
-                                ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.black,
-                                      ),
-                                    ),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(
-                                        Icons.add_circle_outline,
-                                        color: Colors.black,
-                                      ),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Log Set',
-                                        style: TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 32),
-
-              // History Section
-              Row(
-                children: [
-                  const Icon(Icons.history, color: Color(0xFF22FF7A), size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Workout History',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // History List
-              SizedBox(
-                height: 300,
-                child: isLoading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF22FF7A),
-                        ),
-                      )
-                    : logs.isEmpty
-                    ? Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A2C1D).withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF2A3D2E)),
-                        ),
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.fitness_center_outlined,
-                                color: Color(0xFF8A9B8A),
-                                size: 48,
-                              ),
-                              SizedBox(height: 16),
-                              Text(
-                                'No workout history yet',
-                                style: TextStyle(
-                                  color: Color(0xFF8A9B8A),
-                                  fontSize: 16,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Log your first set to get started!',
-                                style: TextStyle(
-                                  color: Color(0xFF8A9B8A),
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: recentLogs.length,
-                        itemBuilder: (context, index) {
-                          final log = logs[index];
-                          final isLatest = index == 0;
-
-                          return Dismissible(
-                            key: Key(recentLogs[index].id),
-                            direction: DismissDirection.endToStart,
-                            background: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.red[600],
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              alignment: Alignment.centerRight,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
-                              ),
-                              child: const Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Delete',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            confirmDismiss: (direction) async {
-                              return await showDialog<bool>(
-                                context: context,
-                                builder: (_) => AlertDialog(
-                                  backgroundColor: const Color(0xFF1A2C1D),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  title: const Text(
-                                    'Delete Workout Log',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                  content: const Text(
-                                    'This action cannot be undone. Are you sure you want to delete this workout log?',
-                                    style: TextStyle(color: Color(0xFF8A9B8A)),
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      child: const Text(
-                                        'Cancel',
-                                        style: TextStyle(
-                                          color: Color(0xFF8A9B8A),
-                                        ),
-                                      ),
-                                      onPressed: () =>
-                                          Navigator.pop(context, false),
-                                    ),
-                                    ElevatedButton(
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red[600],
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                      ),
-                                      onPressed: () =>
-                                          Navigator.pop(context, true),
-                                      child: const Text(
-                                        'Delete',
-                                        style: TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                            onDismissed: (direction) async {
-                              try {
-                                await ApiService.deleteLog(
-                                  recentLogs[index].id,
-                                );
-                                setState(() {
-                                  recentLogs.removeAt(index);
-                                });
-                                HapticFeedback.mediumImpact();
-                                _showSuccessSnackBar('Workout log deleted');
-                              } catch (e) {
-                                _showErrorSnackBar(
-                                  'Failed to delete workout log',
-                                );
-                              }
-                            },
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: isLatest
-                                    ? const Color(0xFF22FF7A).withOpacity(0.1)
-                                    : const Color(0xFF1A2C1D),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isLatest
-                                      ? const Color(0xFF22FF7A).withOpacity(0.3)
-                                      : const Color(0xFF2A3D2E),
-                                ),
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 8,
-                                ),
-                                leading: Container(
-                                  width: 48,
-                                  height: 48,
-                                  decoration: BoxDecoration(
-                                    color: isLatest
-                                        ? const Color(
-                                            0xFF22FF7A,
-                                          ).withOpacity(0.2)
-                                        : const Color(0xFF2A3D2E),
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                  child: Icon(
-                                    Icons.fitness_center,
-                                    color: isLatest
-                                        ? const Color(0xFF22FF7A)
-                                        : const Color(0xFF8A9B8A),
-                                    size: 20,
-                                  ),
-                                ),
-                                title: Row(
-                                  children: [
-                                    Text(
-                                      '${log.weight} kg × ${log.reps} reps',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (isLatest) ...[
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF22FF7A),
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                        ),
-                                        child: const Text(
-                                          'Latest',
-                                          style: TextStyle(
-                                            color: Colors.black,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      log.date.toLocal().toString().split(
-                                        ' ',
-                                      )[0],
-                                      style: const TextStyle(
-                                        color: Color(0xFF8A9B8A),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    if (log.notes != null &&
-                                        log.notes!.isNotEmpty) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        log.notes!,
-                                        style: const TextStyle(
-                                          color: Color(0xFF8A9B8A),
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                trailing: const Icon(
-                                  Icons.drag_handle,
-                                  color: Color(0xFF8A9B8A),
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
           ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Delete', style: TextStyle(color: Colors.red.shade400)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- Snackbars for feedback ---
+
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
+        backgroundColor: const Color(0xFF22FF7A),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
