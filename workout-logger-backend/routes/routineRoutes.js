@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Routine = require('../models/Routine');
 const auth = require('../middleware/firebaseAuth');
-
+const Exercise  = require('../models/Exercise');
+const WorkoutLog = require('../models/WorkoutLog');   
+const mongoose = require('mongoose');
 
 // Create a routine
 router.post('/',auth, async (req, res) => {
@@ -27,18 +29,38 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Delete a routine by ID
+// DELETE /api/routines/:id
 router.delete('/:id', async (req, res) => {
-     try {
-       const deleted = await Routine.findByIdAndDelete(req.params.id);
-       if (!deleted) {
-         return res.status(404).json({ error: 'Routine not found' });
-       }
-       res.status(200).json({ message: 'Routine deleted successfully' });
-     } catch (err) {
-       res.status(500).json({ error: 'Failed to delete routine' });
-     }
-   });
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      /* 1. Delete the routine itself */
+      const routine = await Routine.findOneAndDelete(
+        { _id: req.params.id, userId: req.uid },   // secure: owner only
+        { session }
+      );
+      if (!routine) throw new Error('Routine not found');
+      console.log('Routine deleted:', routine);
+
+      /* 2. Find & delete exercises in that routine */
+      const exercises = await Exercise.find({ routineId: routine._id }, '_id', { session });
+      const exerciseIds = exercises.map(e => e._id);
+
+      await Exercise.deleteMany({ _id: { $in: exerciseIds } }).session(session);
+
+      /* 3. Delete logs that belong to those exercises */
+      await WorkoutLog.deleteMany({ exerciseId: { $in: exerciseIds } }).session(session);
+    });
+
+    res.status(200).json({ message: 'Routine + children removed' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to delete routine and children' });
+  } finally {
+    await session.endSession();
+  }
+});
+
    
 
 module.exports = router;

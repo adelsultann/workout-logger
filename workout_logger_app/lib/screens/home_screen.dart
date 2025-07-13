@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFF1A2C1D),
+        backgroundColor: Color(0xFF1C1C1E),
         title: Text("New Routine", style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,

@@ -3,12 +3,14 @@ class Exercise {
   final String routineId;
   final String name;
   final int totalSets;
+  final String userId;
 
   Exercise({
     required this.id,
     required this.routineId,
     required this.name,
     required this.totalSets,
+    required this.userId,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class Exercise {
       routineId: json['routineId'],
       name: json['name'],
       totalSets: (json['totalSets'] ?? 0) as int,
+      userId: json['userId'] ?? '',
     );
   }
 }

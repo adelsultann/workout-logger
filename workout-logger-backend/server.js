@@ -3,7 +3,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
-
+const auth = require('./middleware/firebaseAuth');
 
 
 const app = express();
@@ -19,6 +19,9 @@ mongoose.connect(process.env.MONGO_URI)
 app.get('/', (req, res) => {
      res.send('Workout Logger API is running');
    });
+
+   // Firebase Authentication Middleware
+app.use('/api', auth);           
 
    // Routine Routes
 const routineRoutes = require('./routes/routineRoutes');

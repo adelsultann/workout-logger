@@ -3,6 +3,7 @@ const router = express.Router();
 const WorkoutLog = require('../models/WorkoutLog');
 const Exercise = require('../models/Exercise');
 const auth = require('../middleware/firebaseAuth');
+const { default: mongoose } = require('mongoose');
 
 // Log a new workout set
 router.post('/',auth, async (req, res) => {
@@ -87,5 +88,7 @@ router.delete('/:id', async (req, res) => {
        res.status(500).json({ error: 'Failed to delete log' });
      }
    });
+
+
    
 module.exports = router;
