@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:overload_pro_app/services/api_service.dart';
 import 'package:overload_pro_app/widgets/backUpData.dart';
 import 'package:overload_pro_app/widgets/bottom_nav_bar.dart';
+import 'package:overload_pro_app/utils/unit_pref.dart';
 
 class SettingScreen extends StatefulWidget {
   const SettingScreen({super.key});
@@ -16,11 +17,40 @@ class _SettingScreenState extends State<SettingScreen> {
   int exerciseCount = 0;
   int totalSets = 0;
   bool isLoading = true;
+  WeightUnit _unit = WeightUnit.kg;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
+    UnitPref.get().then((u) => setState(() => _unit = u));
+  }
+
+  void _changeUnitDialog() async {
+    final chosen = await showDialog<WeightUnit>(
+      context: context,
+      builder: (_) => SimpleDialog(
+        backgroundColor: const Color(0xFF1A2C1D),
+        title: const Text('Select unit', style: TextStyle(color: Colors.white)),
+        children: WeightUnit.values.map((u) {
+          return RadioListTile<WeightUnit>(
+            value: u,
+            groupValue: _unit,
+            activeColor: const Color(0xFF22FF7A),
+            title: Text(
+              u == WeightUnit.kg ? 'Kilograms (kg)' : 'Pounds (lbs)',
+              style: const TextStyle(color: Colors.white),
+            ),
+            onChanged: (v) => Navigator.pop(context, v),
+          );
+        }).toList(),
+      ),
+    );
+
+    if (chosen != null && chosen != _unit) {
+      await UnitPref.set(chosen);
+      if (mounted) setState(() => _unit = chosen);
+    }
   }
 
   Future<void> _loadStats() async {
@@ -56,7 +86,7 @@ class _SettingScreenState extends State<SettingScreen> {
       final shouldLogout = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: const Color(0xFF1A2C1D),
+          backgroundColor: const Color(0xFF1C1C1E),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -141,7 +171,7 @@ class _SettingScreenState extends State<SettingScreen> {
     final isGuest = user == null || user.isAnonymous;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1E13),
+      backgroundColor: const Color(0xFF2C2C2E),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -171,7 +201,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A2C1D),
+                        color: const Color(0xFF1C1C1E),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -251,7 +281,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A2C1D),
+                        color: const Color(0xFF2C2C2E),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -304,7 +334,7 @@ class _SettingScreenState extends State<SettingScreen> {
                     // ───── Settings Options ─────
                     Container(
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1A2C1D),
+                        color: const Color(0xFF2C2C2E),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -328,14 +358,24 @@ class _SettingScreenState extends State<SettingScreen> {
                             },
                           ),
                           _buildDivider(),
+                          // _buildDivider(),
+                          // _buildSettingsOption(
+                          //   'Help & Support',
+                          //   'Get help and contact support',
+                          //   Icons.help_outline,
+                          //   onTap: () {
+                          //     // Navigate to help
+                          //   },
+                          // ),
                           _buildSettingsOption(
-                            'Help & Support',
-                            'Get help and contact support',
-                            Icons.help_outline,
-                            onTap: () {
-                              // Navigate to help
-                            },
+                            'Weight Unit',
+                            _unit == WeightUnit.kg
+                                ? 'Currently kg'
+                                : 'Currently lbs',
+                            Icons.scale,
+                            onTap: _changeUnitDialog,
                           ),
+
                           _buildDivider(),
                           _buildSettingsOption(
                             'About',
@@ -398,19 +438,14 @@ class _SettingScreenState extends State<SettingScreen> {
               ),
       ),
       bottomNavigationBar: BottomNavBar(
-        currentIndex: 2,
+        currentIndex: 1,
         onTap: (i) {
           switch (i) {
             case 0:
               Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/progress');
-              break;
-            case 2:
-              break; // already here
-            case 3:
-              break;
+              Navigator.pushReplacementNamed(context, '/settings');
           }
         },
       ),
@@ -426,7 +461,7 @@ class _SettingScreenState extends State<SettingScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F1E13),
+        color: const Color(0xFF2C2C2E),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF22FF7A).withOpacity(0.3)),
       ),

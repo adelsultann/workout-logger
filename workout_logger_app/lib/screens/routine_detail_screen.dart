@@ -235,7 +235,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1A2C1D), // Modern dark background
+        backgroundColor: const Color(0xFF2C2C2E), // Modern dark background
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Add New Exercise',
@@ -266,7 +266,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                   labelText: 'Exercise Name',
                   labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
                   filled: true,
-                  fillColor: const Color(0xFF2C2C2E),
+                  fillColor: const Color.fromARGB(255, 66, 66, 72),
                   prefixIcon: const Icon(
                     Icons.fitness_center_outlined,
                     color: Color(0xFF8A9B8A),
@@ -295,7 +295,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                   labelText: 'Total Sets',
                   labelStyle: const TextStyle(color: Color(0xFF8A9B8A)),
                   filled: true,
-                  fillColor: const Color(0xFF2C2C2E),
+                  fillColor: const Color.fromARGB(255, 66, 66, 72),
                   prefixIcon: const Icon(
                     Icons.format_list_numbered,
                     color: Color(0xFF8A9B8A),
@@ -414,7 +414,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1E13),
+      backgroundColor: const Color(0xFF1C1C1E),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -495,14 +495,20 @@ class _ExerciseCard extends StatelessWidget {
       confirmDismiss: (_) async => await showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          backgroundColor: const Color(0xFF1A2C1D),
+          backgroundColor: const Color(0xFF2C2C2E),
           title: const Text('Delete?', style: TextStyle(color: Colors.white)),
           actions: [
             TextButton(
-              child: const Text('Cancel'),
+              style: TextButton.styleFrom(foregroundColor: Colors.white54),
+
               onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.black,
+                backgroundColor: Color(0xFF22FF7A),
+              ),
               child: const Text('Delete'),
               onPressed: () => Navigator.pop(context, true),
             ),
@@ -511,7 +517,7 @@ class _ExerciseCard extends StatelessWidget {
       ),
       onDismissed: (_) => onDismissed(),
       child: Card(
-        color: const Color(0xFF1A2C1D),
+        color: const Color(0xFF2C2C2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: ListTile(
           onTap: onTap,

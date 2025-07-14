@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Color(0xFF1C1C1E),
+        backgroundColor: Color(0xFF2C2C2E),
         title: Text("New Routine", style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
@@ -86,9 +86,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFF0F1E13),
+      backgroundColor: Color(0xFF1C1C1E),
       appBar: AppBar(
-        backgroundColor: Color(0xFF0F1E13),
+        backgroundColor: Color(0xFF1C1C1E),
         elevation: 0,
         title: Text(
           'Welcome back, Adel',
@@ -139,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             return await showDialog(
                               context: context,
                               builder: (_) => AlertDialog(
-                                backgroundColor: const Color(0xFF1A2C1D),
+                                backgroundColor: const Color(0xFF2C2C2E),
                                 title: const Text(
                                   "Delete Routine",
                                   style: TextStyle(color: Colors.white),
@@ -183,7 +183,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             }
                           },
                           child: Card(
-                            color: const Color(0xFF1A2C1D),
+                            color: const Color(0xFF2C2C2E),
                             margin: const EdgeInsets.symmetric(vertical: 8),
                             child: ListTile(
                               title: Text(
@@ -224,14 +224,14 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.pushReplacementNamed(context, '/home');
               break;
             case 1:
-              Navigator.pushReplacementNamed(context, '/progress');
-              break;
-            case 2:
               Navigator.pushReplacementNamed(context, '/settings');
               break;
-            case 3:
-              // Navigator.pushReplacementNamed(context, '/profile');
-              break;
+            // case 2:
+            //   Navigator.pushReplacementNamed(context, '/settings');
+            //   break;
+            // case 3:
+            //   // Navigator.pushReplacementNamed(context, '/profile');
+            //   break;
           }
         },
       ),

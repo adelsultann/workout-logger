@@ -55,7 +55,7 @@ class WorkoutLoggerApp extends StatelessWidget {
         '/home': (_) => const HomeScreen(),
         '/settings': (_) => const SettingScreen(),
         '/signup': (_) => const AuthScreen(), // new
-        '/progress': (_) => const ProgressScreen(),
+        // '/progress': (_) => const ProgressScreen(),
         // '/progress': (_) => ProgressChartScreen(),
         // '/calendar': (_) => CalendarScreen(),
         // '/profile': (_) => ProfileScreen(),

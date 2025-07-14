@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:overload_pro_app/models/workout_log.dart';
 import 'package:intl/intl.dart';
 import '../services/api_service.dart';
+import 'package:overload_pro_app/utils/unit_pref.dart';
 
 enum TimePeriod { week, month, year }
 
@@ -26,12 +27,19 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
   Map<String, bool> showWeight = {};
   TimePeriod selectedPeriod = TimePeriod.month;
   bool isLoading = true;
+  WeightUnit _unit = WeightUnit.kg;
 
   @override
   void initState() {
     super.initState();
+    UnitPref.get().then((u) => setState(() => _unit = u));
     fetchAllLogs();
   }
+
+  /* ───────────────────────────────── helpers ───────────────────────────── */
+
+  double _display(double kg) => _unit == WeightUnit.kg ? kg : kg * 2.20462;
+  String _unitLbl() => _unit == WeightUnit.kg ? 'kg' : 'lbs';
 
   Future<void> fetchAllLogs() async {
     try {
@@ -98,7 +106,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
   Widget _buildTimePeriodSelector() {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2C1D),
+        color: const Color(0xFF2C2C2E),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFF22FF7A).withOpacity(0.3)),
       ),
@@ -138,9 +146,13 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
     if (logs.isEmpty) return const SizedBox();
 
     final isWeight = showWeight[selectedExerciseName]!;
-    final latestValue = isWeight ? logs.last.weight : logs.last.reps.toDouble();
+
+    // Apply unit conversion for weight display
+    final latestValue = isWeight
+        ? _display(logs.last.weight)
+        : logs.last.reps.toDouble();
     final startingValue = isWeight
-        ? logs.first.weight
+        ? _display(logs.first.weight)
         : logs.first.reps.toDouble();
 
     double percentageChange = 0;
@@ -158,7 +170,10 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFF1A2C1D), const Color(0xFF0F1E13)],
+          colors: [
+            const Color(0xFF2C2C2E),
+            const Color(0xFF2C2C2E).withOpacity(0),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -218,7 +233,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(
-                  isWeight ? "kg" : "reps",
+                  isWeight ? _unitLbl() : "reps", // Use unit label
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 16,
@@ -237,8 +252,6 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
       ),
     );
   }
-
-  // Replace your existing _buildChart method with this corrected version
 
   Widget _buildChart() {
     final logs = _getFilteredLogs();
@@ -271,18 +284,20 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
     }
 
     final isWeight = showWeight[selectedExerciseName]!;
+
+    // Apply unit conversion for chart spots
     final spots = logs
         .asMap()
         .entries
         .map(
           (entry) => FlSpot(
             entry.key.toDouble(),
-            isWeight ? entry.value.weight : entry.value.reps.toDouble(),
+            isWeight
+                ? _display(entry.value.weight) // Convert weight units
+                : entry.value.reps.toDouble(),
           ),
         )
         .toList();
-
-    // --- START OF THE FIX ---
 
     final values = spots.map((spot) => spot.y).toList();
     final minValue = values.reduce((a, b) => a < b ? a : b);
@@ -296,26 +311,21 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
     // Check if all data points are the same
     if (minValue == maxValue) {
       // If so, create a default visible range
-      finalMinY = minValue - 5; // Give 5 units of space below
-      finalMaxY = maxValue + 5; // Give 5 units of space above
-      // Set a sensible default interval to prevent it from being zero
+      finalMinY = minValue - 5;
+      finalMaxY = maxValue + 5;
       horizontalInterval = 2.5;
       leftTitleInterval = 2.5;
     } else {
-      // If data points differ, use the original dynamic calculation
       final range = maxValue - minValue;
-      final padding = range * 0.1; // 10% padding
+      final padding = range * 0.1;
       finalMinY = minValue - padding;
       finalMaxY = maxValue + padding;
-      horizontalInterval = range / 4; // Divide the range into 4 grid lines
+      horizontalInterval = range / 4;
       leftTitleInterval = range / 4;
     }
 
-    // Ensure interval is never zero, as a final safeguard.
     if (horizontalInterval == 0) horizontalInterval = 1;
     if (leftTitleInterval == 0) leftTitleInterval = 1;
-
-    // --- END OF THE FIX ---
 
     int getXAxisInterval() {
       if (logs.length <= 5) return 1;
@@ -329,20 +339,20 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A2C1D).withOpacity(0.5),
+        color: const Color(0xFF2C2C2E).withOpacity(0.5),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFF22FF7A).withOpacity(0.1)),
       ),
       child: LineChart(
         LineChartData(
-          minY: finalMinY, // Use the safe value
-          maxY: finalMaxY, // Use the safe value
+          minY: finalMinY,
+          maxY: finalMaxY,
           gridData: FlGridData(
             show: true,
             drawVerticalLine: true,
             drawHorizontalLine: true,
             verticalInterval: getXAxisInterval().toDouble(),
-            horizontalInterval: horizontalInterval, // Use the safe value
+            horizontalInterval: horizontalInterval,
             getDrawingVerticalLine: (value) =>
                 FlLine(color: Colors.white.withOpacity(0.05), strokeWidth: 1),
             getDrawingHorizontalLine: (value) =>
@@ -362,8 +372,10 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                     final dateStr = DateFormat(
                       _getDateFormat(),
                     ).format(log.date);
+
+                    // Apply unit conversion for bottom title display
                     final valueStr = isWeight
-                        ? '${log.weight.toStringAsFixed(1)}kg'
+                        ? '${_display(log.weight).toStringAsFixed(1)}${_unitLbl()}'
                         : '${log.reps} reps';
 
                     return Padding(
@@ -400,9 +412,8 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
               sideTitles: SideTitles(
                 showTitles: true,
                 reservedSize: 50,
-                interval: leftTitleInterval, // Use the safe value
+                interval: leftTitleInterval,
                 getTitlesWidget: (value, meta) {
-                  // Don't show the min value label to avoid overlap with bottom titles
                   if (value == finalMinY) {
                     return const SizedBox();
                   }
@@ -463,7 +474,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1E13),
+      backgroundColor: const Color(0xFF2C2C2E),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -494,7 +505,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1A2C1D),
+                      color: const Color(0xFF2C2C2E),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -502,7 +513,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        dropdownColor: const Color(0xFF1A2C1D),
+                        dropdownColor: const Color(0xFF2C2C2E),
                         value: selectedExerciseName,
                         isExpanded: true,
                         style: const TextStyle(
@@ -547,7 +558,7 @@ class _RoutineProgressScreenState extends State<RoutineProgressScreen> {
                       children: [
                         Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF1A2C1D),
+                            color: const Color(0xFF2C2C2E),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: const Color(0xFF22FF7A).withOpacity(0.3),

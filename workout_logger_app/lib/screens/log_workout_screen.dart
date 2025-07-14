@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart'; // Make sure you have this package
+import 'package:intl/intl.dart';
 import 'package:overload_pro_app/models/workout_log.dart';
+import 'package:overload_pro_app/utils/unit_pref.dart';
 import '../models/exercise.dart';
 import '../services/api_service.dart';
 
 class LogWorkoutScreen extends StatefulWidget {
   final Exercise exercise;
-
   const LogWorkoutScreen({super.key, required this.exercise});
 
   @override
@@ -23,11 +23,18 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
   List<WorkoutLog> _logs = [];
   bool _isLoading = true;
   bool _isSaving = false;
+  WeightUnit _unit = WeightUnit.kg; // default
 
   @override
   void initState() {
     super.initState();
+    _initUnit();
     _loadLogs();
+  }
+
+  Future<void> _initUnit() async {
+    final u = await UnitPref.get();
+    if (mounted) setState(() => _unit = u);
   }
 
   @override
@@ -38,32 +45,35 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
     super.dispose();
   }
 
-  // --- Data Handling ---
+  /* ----------------------------- LOAD / SAVE ----------------------------- */
 
   Future<void> _loadLogs() async {
     try {
       final data = await ApiService.getLogs(widget.exercise.id);
-      data.sort((a, b) => b.date.compareTo(a.date)); // Sort newest to oldest
+      data.sort((a, b) => b.date.compareTo(a.date));
       setState(() {
         _logs = data;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (_) {
       _showErrorSnackBar('Failed to load workout history');
       setState(() => _isLoading = false);
     }
   }
 
+  double _toKg(double value) =>
+      _unit == WeightUnit.kg ? value : value / 2.20462;
+  double _display(double kg) => _unit == WeightUnit.kg ? kg : kg * 2.20462;
+
   Future<void> _submitLog() async {
     if (!_formKey.currentState!.validate()) return;
-
     HapticFeedback.lightImpact();
     setState(() => _isSaving = true);
 
     try {
       final newLog = await ApiService.addLog(
         exerciseId: widget.exercise.id,
-        weight: double.parse(_weightController.text.trim()),
+        weight: _toKg(double.parse(_weightController.text.trim())),
         reps: int.parse(_repsController.text.trim()),
         notes: _notesController.text.trim().isEmpty
             ? null
@@ -79,35 +89,39 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
         _notesController.clear();
         FocusScope.of(context).unfocus();
       });
-
       _showSuccessSnackBar('Workout logged successfully!');
-    } catch (e) {
+    } catch (_) {
       setState(() => _isSaving = false);
       _showErrorSnackBar('Failed to save workout log');
     }
   }
 
-  // --- NEW: Handle Log Deletion ---
-  Future<void> _deleteLog(String logId) async {
+  Future<void> _deleteLog(String id) async {
     try {
-      await ApiService.deleteLog(logId);
-      setState(() {
-        _logs.removeWhere((log) => log.id == logId);
-      });
-      HapticFeedback.mediumImpact();
-      _showSuccessSnackBar('Log deleted successfully');
-    } catch (e) {
+      await ApiService.deleteLog(id);
+      setState(() => _logs.removeWhere((l) => l.id == id));
+      _showSuccessSnackBar('Log deleted');
+    } catch (_) {
       _showErrorSnackBar('Failed to delete log');
     }
   }
 
-  // --- UI Widgets ---
+  /* --------------------------------  UI  --------------------------------- */
 
   @override
   Widget build(BuildContext context) {
+    final unitLabel = _unit == WeightUnit.kg ? 'kg' : 'lbs';
+
     return Scaffold(
       backgroundColor: const Color(0xFF1C1C1E),
       appBar: AppBar(
+        backgroundColor: const Color(0xFF1C1C1E),
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           widget.exercise.name,
           style: const TextStyle(
@@ -115,25 +129,17 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: const Color(0xFF1C1C1E),
-        elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 16),
               _buildInputField(
                 controller: _weightController,
-                label: 'Weight (kg)',
+                label: 'Weight ($unitLabel)',
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
@@ -154,22 +160,27 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
               const SizedBox(height: 32),
               _buildSaveButton(),
               const SizedBox(height: 48),
-              const Text(
-                'Recent Logs',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Recent Logs',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
-              _buildLogsList(),
+              _buildLogsList(unitLabel),
             ],
           ),
         ),
       ),
     );
   }
+
+  /* ------------------------  Re-usable Widgets  ------------------------- */
 
   Widget _buildInputField({
     required TextEditingController controller,
@@ -180,18 +191,15 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
   }) {
     return TextFormField(
       controller: controller,
-      style: const TextStyle(color: Colors.white, fontSize: 16),
+      style: const TextStyle(color: Colors.white),
       keyboardType: keyboardType,
       maxLines: maxLines,
-      validator: (value) {
-        if (!isOptional && (value == null || value.isEmpty)) {
-          return 'This field is required';
-        }
+      validator: (v) {
+        if (!isOptional && (v == null || v.isEmpty)) return 'Required';
         if (keyboardType != null &&
-            value != null &&
-            value.isNotEmpty &&
-            double.tryParse(value) == null) {
-          return 'Please enter a valid number';
+            v!.isNotEmpty &&
+            double.tryParse(v) == null) {
+          return 'Invalid number';
         }
         return null;
       },
@@ -219,18 +227,18 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
         onPressed: _isSaving ? null : _submitLog,
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF22FF7A),
-          disabledBackgroundColor: const Color(0xFF22FF7A).withOpacity(0.5),
+          disabledBackgroundColor: const Color(0xFF22FF7A).withOpacity(.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
         ),
         child: _isSaving
             ? const SizedBox(
-                height: 24,
                 width: 24,
+                height: 24,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
+                  valueColor: AlwaysStoppedAnimation(Colors.black),
                 ),
               )
             : const Text(
@@ -245,55 +253,49 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
     );
   }
 
-  /// Builds the list of recent workout logs.
-  Widget _buildLogsList() {
+  Widget _buildLogsList(String unitLabel) {
     if (_isLoading) {
       return const Center(
         child: CircularProgressIndicator(color: Color(0xFF22FF7A)),
       );
     }
 
-    // --- MODIFIED: Limit the list based on totalSets ---
     final displayLogs = _logs.take(widget.exercise.totalSets).toList();
 
     if (displayLogs.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 40.0),
-          child: Text(
-            'No logs yet. Save your first set!',
-            style: TextStyle(color: Color(0xFF8A9B8A), fontSize: 16),
-          ),
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 40),
+        child: Text(
+          'No logs yet. Save your first set!',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF8A9B8A)),
         ),
       );
     }
+
     return ListView.builder(
-      itemCount: displayLogs.length,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemBuilder: (context, index) {
-        final log = displayLogs[index];
-        final setNumber = displayLogs.length - index;
-
-        // --- MODIFIED: Wrapped log item in a Dismissible for deletion ---
+      itemCount: displayLogs.length,
+      itemBuilder: (context, idx) {
+        final log = displayLogs[idx];
+        final setNumber = displayLogs.length - idx;
         return Dismissible(
           key: Key(log.id),
           direction: DismissDirection.endToStart,
-          onDismissed: (_) => _deleteLog(log.id),
           confirmDismiss: (_) => _showDeleteConfirmationDialog(),
+          onDismissed: (_) => _deleteLog(log.id),
           background: _buildDismissibleBackground(),
-          child: _buildLogItem(log, setNumber),
+          child: _buildLogItem(log, setNumber, unitLabel),
         );
       },
     );
   }
 
-  /// Builds a single log item card.
-  Widget _buildLogItem(WorkoutLog log, int setNumber) {
+  Widget _buildLogItem(WorkoutLog log, int setNumber, String unitLabel) {
     return Container(
-      // Added a background color to prevent UI issues during dismissal
       color: const Color(0xFF1C1C1E),
-      padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+      padding: const EdgeInsets.only(bottom: 16, top: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -304,103 +306,76 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen> {
                 DateFormat('MMMM d, yyyy').format(log.date.toLocal()),
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 4),
               Text(
-                '${log.weight} kg ⋅ ${log.reps} reps',
-                style: const TextStyle(color: Color(0xFF8A9B8A), fontSize: 14),
+                '${_display(log.weight).toStringAsFixed(1)} $unitLabel · ${log.reps} reps',
+                style: const TextStyle(color: Color(0xFF8A9B8A)),
               ),
             ],
           ),
           Text(
             'Set $setNumber',
-            style: const TextStyle(
-              color: Color(0xFF8A9B8A),
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(color: Color(0xFF8A9B8A)),
           ),
         ],
       ),
     );
   }
 
-  // --- NEW: Helper widgets for deletion ---
+  /* -------------------------  Delete helpers  -------------------------- */
 
-  /// Builds the red background that appears when swiping to delete.
-  Widget _buildDismissibleBackground() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16.0, top: 8.0),
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      decoration: BoxDecoration(
-        color: Colors.red.shade400,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          Icon(Icons.delete, color: Colors.white),
-          SizedBox(width: 8),
-          Text('Delete', style: TextStyle(color: Colors.white)),
-        ],
-      ),
-    );
-  }
+  Widget _buildDismissibleBackground() => Container(
+    margin: const EdgeInsets.only(bottom: 16, top: 8),
+    padding: const EdgeInsets.symmetric(horizontal: 20),
+    decoration: BoxDecoration(
+      color: Colors.red.shade400,
+      borderRadius: BorderRadius.circular(12),
+    ),
+    alignment: Alignment.centerRight,
+    child: const Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Icon(Icons.delete, color: Colors.white),
+        SizedBox(width: 8),
+        Text('Delete', style: TextStyle(color: Colors.white)),
+      ],
+    ),
+  );
 
-  /// Shows a confirmation dialog before deleting a log.
-  Future<bool?> _showDeleteConfirmationDialog() {
-    return showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Log?', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'This action cannot be undone.',
-          style: TextStyle(color: Color(0xFF8A9B8A)),
+  Future<bool?> _showDeleteConfirmationDialog() => showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      backgroundColor: const Color(0xFF2C2C2E),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Delete log?', style: TextStyle(color: Colors.white)),
+      content: const Text(
+        'This action cannot be undone.',
+        style: TextStyle(color: Color(0xFF8A9B8A)),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancel'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text('Delete', style: TextStyle(color: Colors.red.shade400)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Snackbars for feedback ---
-
-  void _showSuccessSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Delete'),
         ),
-        backgroundColor: const Color(0xFF22FF7A),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
-  void _showErrorSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  /* --------------------------  Snackbars  ----------------------------- */
+
+  void _showSuccessSnackBar(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: const Color(0xFF22FF7A)),
+      );
+  void _showErrorSnackBar(String msg) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), backgroundColor: Colors.redAccent),
+      );
 }

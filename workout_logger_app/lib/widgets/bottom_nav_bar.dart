@@ -13,7 +13,7 @@ class BottomNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      backgroundColor: const Color(0xFF0F1E13),
+      backgroundColor: const Color(0xFF1C1C1E),
       selectedItemColor: const Color(0xFF22FF7A),
       unselectedItemColor: Colors.white38,
       currentIndex: currentIndex,
@@ -23,11 +23,11 @@ class BottomNavBar extends StatelessWidget {
       showUnselectedLabels: false,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.fitness_center),
-          label: 'Progress',
-        ),
 
+        // BottomNavigationBarItem(
+        //   icon: Icon(Icons.fitness_center),
+        //   label: 'Progress',
+        // ),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

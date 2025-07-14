@@ -22,11 +22,12 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
   bool _isExporting = false;
   String _exportStatus = '';
   List<String> _exportedFiles = [];
+  String _selectedFormat = 'organized'; // 'organized' or 'separate'
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F1E13),
+      backgroundColor: const Color(0xFF1C1C1E),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -53,7 +54,7 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A2C1D),
+                color: const Color(0xFF2C2C2E),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -82,7 +83,7 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Export all your workout data including routines, exercises, and workout logs as CSV files. This backup can be used to restore your data or analyze your progress in external tools.',
+                    'Export your workout data in an organized format. Each routine will be clearly structured with its exercises and workout logs for easy reading and analysis.',
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 16,
@@ -95,11 +96,52 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
 
             const SizedBox(height: 24),
 
+            // ───── Export Format Selection ─────
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF2C2C2E),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFF22FF7A).withOpacity(0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Export Format:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _buildFormatOption(
+                    'organized',
+                    'Organized Format',
+                    'All routines in one file, clearly separated and structured',
+                    Icons.view_stream,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildFormatOption(
+                    'separate',
+                    'Separate Files',
+                    'Each routine in its own file for individual analysis',
+                    Icons.folder_open,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             // ───── Export Options ─────
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF1A2C1D),
+                color: const Color(0xFF2C2C2E),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -118,24 +160,24 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
                   ),
                   const SizedBox(height: 16),
                   _buildExportItem(
-                    'Routines',
-                    'All your workout routines with details',
+                    'Routine Structure',
+                    'Each routine with its name and description',
                     Icons.format_list_bulleted,
                   ),
                   _buildExportItem(
-                    'Exercises',
-                    'Exercise details, sets, reps, and weights',
+                    'Exercise Details',
+                    'Exercise names, sets, and specifications',
                     Icons.fitness_center,
                   ),
                   _buildExportItem(
                     'Workout Logs',
-                    'Complete workout history and progress',
+                    'Reps, weights, and dates for each exercise',
                     Icons.history,
                   ),
                   _buildExportItem(
-                    'Timestamps',
-                    'Creation and modification dates',
-                    Icons.access_time,
+                    'Organized Layout',
+                    'Easy-to-read format with clear sections',
+                    Icons.dashboard,
                   ),
                 ],
               ),
@@ -185,7 +227,7 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
                         Icon(Icons.download, color: Colors.black),
                         SizedBox(width: 8),
                         Text(
-                          'Export All Data',
+                          'Export Workout Data',
                           style: TextStyle(
                             color: Colors.black,
                             fontSize: 16,
@@ -257,7 +299,7 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A2C1D),
+                  color: const Color(0xFF2C2C2E),
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: const Color(0xFF22FF7A).withOpacity(0.3),
@@ -302,60 +344,78 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
                   ],
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 24),
-
-            // ───── Instructions ─────
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A2C1D),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: const Color(0xFF22FF7A).withOpacity(0.3),
-                ),
-              ),
+  Widget _buildFormatOption(
+    String value,
+    String title,
+    String description,
+    IconData icon,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFormat = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _selectedFormat == value
+              ? const Color(0xFF22FF7A).withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _selectedFormat == value
+                ? const Color(0xFF22FF7A)
+                : Colors.white.withOpacity(0.2),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: _selectedFormat == value
+                  ? const Color(0xFF22FF7A)
+                  : Colors.white.withOpacity(0.6),
+              size: 24,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
-                    children: [
-                      Icon(
-                        Icons.info_outline,
-                        color: Color(0xFF22FF7A),
-                        size: 24,
-                      ),
-                      SizedBox(width: 12),
-                      Text(
-                        'How it works:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: _selectedFormat == value
+                          ? const Color(0xFF22FF7A)
+                          : Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  _buildInstructionStep(
-                    '1',
-                    'Click "Export All Data" to start the process',
-                  ),
-                  _buildInstructionStep(
-                    '2',
-                    'Your data will be converted to CSV format',
-                  ),
-                  _buildInstructionStep(
-                    '3',
-                    'Files will be saved and shared automatically',
-                  ),
-                  _buildInstructionStep(
-                    '4',
-                    'Choose where to save or share your backup',
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.6),
+                      fontSize: 14,
+                    ),
                   ),
                 ],
               ),
             ),
+            if (_selectedFormat == value)
+              const Icon(
+                Icons.check_circle,
+                color: Color(0xFF22FF7A),
+                size: 20,
+              ),
           ],
         ),
       ),
@@ -397,46 +457,6 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
     );
   }
 
-  Widget _buildInstructionStep(String number, String instruction) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              color: const Color(0xFF22FF7A),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(
-                number,
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              instruction,
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _exportAllData() async {
     setState(() {
       _isExporting = true;
@@ -451,40 +471,31 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
       }
 
       setState(() {
-        _exportStatus = 'Fetching data...';
+        _exportStatus = 'Fetching routines and exercises...';
       });
 
       // Fetch all data
       final routines = await ApiService.getRoutines();
-      final allExercises = <Exercise>[];
-      final allLogs = <WorkoutLog>[];
+      final List<RoutineWithData> routinesWithData = [];
 
-      // Collect all exercises and logs
       for (final routine in routines) {
         final exercises = await ApiService.getExercises(routine.id);
-        allExercises.addAll(exercises);
+        final List<ExerciseWithLogs> exercisesWithLogs = [];
 
         for (final exercise in exercises) {
           final logs = await ApiService.getLogs(exercise.id);
-          allLogs.addAll(logs);
+          exercisesWithLogs.add(ExerciseWithLogs(exercise, logs));
         }
+
+        routinesWithData.add(RoutineWithData(routine, exercisesWithLogs));
       }
 
       setState(() {
-        _exportStatus = 'Creating CSV files...';
+        _exportStatus = 'Creating organized files...';
       });
 
-      // Create CSV files
-      final routinesCsv = _createRoutinesCsv(routines);
-      final exercisesCsv = _createExercisesCsv(allExercises);
-      final logsCsv = _createLogsCsv(allLogs);
-
-      // Save files
-      final files = await _saveFiles({
-        'routines': routinesCsv,
-        'exercises': exercisesCsv,
-        'workout_logs': logsCsv,
-      });
+      // Create files based on selected format
+      final files = await _createExportFiles(routinesWithData);
 
       setState(() {
         _exportStatus = 'Sharing files...';
@@ -508,6 +519,108 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
     }
   }
 
+  Future<List<File>> _createExportFiles(
+    List<RoutineWithData> routinesWithData,
+  ) async {
+    final timestamp = DateTime.now().toIso8601String().split('T')[0];
+    final files = <File>[];
+
+    if (_selectedFormat == 'organized') {
+      // Create one organized file with all routines
+      final content = _createOrganizedContent(routinesWithData);
+      final file = await _saveFile(
+        'overload_pro_workout_data_$timestamp.txt',
+        content,
+      );
+      files.add(file);
+    } else {
+      // Create separate files for each routine
+      for (final routineData in routinesWithData) {
+        final content = _createSingleRoutineContent(routineData);
+        final safeName = _sanitizeFileName(routineData.routine.name);
+        final file = await _saveFile(
+          'overload_pro_${safeName}_$timestamp.txt',
+          content,
+        );
+        files.add(file);
+      }
+    }
+
+    return files;
+  }
+
+  String _createOrganizedContent(List<RoutineWithData> routinesWithData) {
+    final buffer = StringBuffer();
+    buffer.writeln('OVERLOAD PRO - WORKOUT DATA EXPORT');
+    buffer.writeln('Generated: ${DateTime.now().toString()}');
+    buffer.writeln('${'=' * 50}');
+    buffer.writeln('');
+
+    for (int i = 0; i < routinesWithData.length; i++) {
+      final routineData = routinesWithData[i];
+      buffer.write(_createSingleRoutineContent(routineData));
+
+      if (i < routinesWithData.length - 1) {
+        buffer.writeln('');
+        buffer.writeln('${'=' * 50}');
+        buffer.writeln('');
+      }
+    }
+
+    return buffer.toString();
+  }
+
+  String _createSingleRoutineContent(RoutineWithData routineData) {
+    final buffer = StringBuffer();
+    final routine = routineData.routine;
+
+    buffer.writeln('=== ${routine.name.toUpperCase()} ===');
+    buffer.writeln(
+      'Created: ${routine.createdAt?.toString().split(' ')[0] ?? 'Unknown'}',
+    );
+    buffer.writeln('');
+
+    if (routineData.exercises.isEmpty) {
+      buffer.writeln('No exercises found for this routine.');
+      buffer.writeln('');
+      return buffer.toString();
+    }
+
+    for (final exerciseData in routineData.exercises) {
+      final exercise = exerciseData.exercise;
+      buffer.writeln('>> ${exercise.name} (${exercise.totalSets} sets)');
+
+      if (exerciseData.logs.isEmpty) {
+        buffer.writeln('   No workout logs recorded');
+      } else {
+        // Sort logs by date (newest first)
+        final sortedLogs = exerciseData.logs.toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
+
+        for (final log in sortedLogs) {
+          buffer.write('   Date: ${log.date.toString().split(' ')[0]}');
+          buffer.write(' | Reps: ${log.reps}');
+          buffer.write(' | Weight: ${log.weight}kg');
+
+          if (log.notes != null && log.notes!.isNotEmpty) {
+            buffer.write(' | Notes: ${log.notes}');
+          }
+          buffer.writeln('');
+        }
+      }
+      buffer.writeln('');
+    }
+
+    return buffer.toString();
+  }
+
+  String _sanitizeFileName(String fileName) {
+    return fileName
+        .replaceAll(RegExp(r'[^\w\s-]'), '')
+        .replaceAll(RegExp(r'\s+'), '_')
+        .toLowerCase();
+  }
+
   Future<void> _requestPermissions() async {
     if (Platform.isAndroid) {
       await Permission.storage.request();
@@ -515,94 +628,10 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
     }
   }
 
-  String _createRoutinesCsv(List<Routine> routines) {
-    final buffer = StringBuffer();
-    buffer.writeln('ID,Name,Description,Created Date,Modified Date');
-
-    for (final routine in routines) {
-      buffer.writeln(
-        [
-          routine.id,
-          _escapeCsvField(routine.name),
-
-          routine.createdAt?.toIso8601String() ?? '',
-          routine.createdAt?.toIso8601String() ?? '',
-        ].join(','),
-      );
-    }
-
-    return buffer.toString();
-  }
-
-  String _createExercisesCsv(List<Exercise> exercises) {
-    final buffer = StringBuffer();
-    buffer.writeln(
-      'ID,Routine ID,Name,Sets,Reps,Weight,Rest Time,Notes,Created Date',
-    );
-
-    for (final exercise in exercises) {
-      buffer.writeln(
-        [
-          exercise.id,
-          exercise.routineId,
-          _escapeCsvField(exercise.name),
-          exercise.totalSets,
-        ].join(','),
-      );
-    }
-
-    return buffer.toString();
-  }
-
-  String _createLogsCsv(List<WorkoutLog> logs) {
-    final buffer = StringBuffer();
-    buffer.writeln(
-      'ID,Exercise ID,Date,Sets Completed,Reps,Weight,Duration,Notes',
-    );
-
-    for (final log in logs) {
-      buffer.writeln(
-        [
-          log.id,
-          log.exerciseId,
-          log.date.toIso8601String(),
-
-          log.reps,
-          log.weight,
-
-          _escapeCsvField(log.notes ?? ''),
-        ].join(','),
-      );
-    }
-
-    return buffer.toString();
-  }
-
-  String _escapeCsvField(String field) {
-    if (field.contains(',') || field.contains('"') || field.contains('\n')) {
-      return '"${field.replaceAll('"', '""')}"';
-    }
-    return field;
-  }
-
-  Future<List<File>> _saveFiles(Map<String, String> csvData) async {
-    final files = <File>[];
-    final timestamp = DateTime.now().toIso8601String().split('T')[0];
-
-    for (final entry in csvData.entries) {
-      final fileName = 'overload_pro_${entry.key}_$timestamp.csv';
-      final file = await _saveFile(fileName, entry.value);
-      files.add(file);
-    }
-
-    return files;
-  }
-
   Future<File> _saveFile(String fileName, String content) async {
     final Directory directory;
 
     if (kIsWeb) {
-      // For web, we'll use a temporary approach
       throw UnimplementedError(
         'Web export not fully implemented in this example',
       );
@@ -628,7 +657,22 @@ class _BackupExportWidgetState extends State<BackupExportWidget> {
       xFiles,
       subject: 'Overload Pro - Workout Data Export',
       text:
-          'Your workout data exported from Overload Pro app. Import these CSV files to restore your data.',
+          'Your workout data exported from Overload Pro app in organized format.',
     );
   }
+}
+
+// Helper classes for organizing data
+class RoutineWithData {
+  final Routine routine;
+  final List<ExerciseWithLogs> exercises;
+
+  RoutineWithData(this.routine, this.exercises);
+}
+
+class ExerciseWithLogs {
+  final Exercise exercise;
+  final List<WorkoutLog> logs;
+
+  ExerciseWithLogs(this.exercise, this.logs);
 }
