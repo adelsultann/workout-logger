@@ -1,3 +1,4 @@
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -68,6 +69,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
               try {
                 final newRoutine = await ApiService.addRoutine(name);
+                await FirebaseAnalytics.instance.logEvent(
+                  name: 'create_routine',
+                  parameters: {
+                    'routine_id': newRoutine.id,
+                    'routine_name': newRoutine.name,
+                  },
+                );
                 setState(() {
                   routines.add(newRoutine);
                 });

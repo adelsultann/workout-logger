@@ -29,6 +29,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     _loadExercises();
   }
 
+  /* -------------------- Load all the exercise----------- */
   Future<void> _loadExercises() async {
     try {
       final data = await ApiService.getExercises(widget.routine.id);
@@ -44,10 +45,11 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     }
   }
 
-  /* --------------------------- UPGRADE DIALOG --------------------------- */
+  /* --------------- UPGRADE DIALOG ----------------------- */
   void _maybeShowSignupDialog(BuildContext ctx) async {
     final firstLaunchCount = await UsageCounter.getExerciseCount();
-    if (firstLaunchCount < 1) return; // prompt after 4 exercises only
+    if (firstLaunchCount < 1)
+      return; // adjust this as needed for selecting the proper time
 
     showDialog(
       context: ctx,
@@ -226,7 +228,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     );
   }
 
-  /* --------------------------- ADD EXERCISE DIALOG --------------------------- */
+  /* ------ ADD EXERCISE DIALOG --------------------------- */
   void _showAddExerciseDialog() {
     final nameCtrl = TextEditingController();
     final setCtrl = TextEditingController();
@@ -235,7 +237,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2E), // Modern dark background
+        backgroundColor: const Color(0xFF2C2C2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text(
           'Add New Exercise',
@@ -325,7 +327,6 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Primary "Add" button
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF22FF7A),

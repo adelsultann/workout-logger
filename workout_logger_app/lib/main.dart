@@ -1,64 +1,74 @@
 import 'package:flutter/material.dart';
-import 'package:overload_pro_app/screens/auth_screen.dart';
-import 'package:overload_pro_app/screens/progress_screen.dart';
-import 'package:overload_pro_app/screens/settingScreen.dart';
-import 'screens/home_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_analytics/observer.dart';
 
-Future<User> ensureUserSignedIn() async {
+import 'firebase_options.dart';
+import 'screens/home_screen.dart';
+import 'screens/auth_screen.dart';
+import 'screens/settingScreen.dart';
+import 'screens/progress_screen.dart';
+
+Future<User> ensureUserSignedIn(FirebaseAnalytics analytics) async {
   final prefs = await SharedPreferences.getInstance();
-  final keys = prefs.getKeys();
-  final map = Map.fromIterable(keys, value: (key) => prefs.get(key));
-  print(" Shared preferences: $map");
-  // Has the user already signed in before?
+
+  // Already signed in?
   if (FirebaseAuth.instance.currentUser != null) {
-    return FirebaseAuth.instance.currentUser!;
+    final u = FirebaseAuth.instance.currentUser!;
+    // Tie analytics user to this UID
+    await analytics.setUserId(id: u.uid);
+    return u;
   }
 
-  // First launch - do anonymous sign-in
-  final userCred = await FirebaseAuth.instance.signInAnonymously();
-  await prefs.setString(
-    'firstSignIn',
-    DateTime.now().toIso8601String(),
-  ); // track timestamp
-  await prefs.setInt('workoutCount', 0); // track usage
-  print("✅ User signed in: ${userCred.user!.uid}");
-  return userCred.user!;
+  // First launch → anonymous
+  final cred = await FirebaseAuth.instance.signInAnonymously();
+  final u = cred.user!;
+  await prefs.setString('firstSignIn', DateTime.now().toIso8601String());
+  await prefs.setInt('workoutCount', 0);
+
+  // Tag analytics with this new UID
+  await analytics.setUserId(id: u.uid);
+  debugPrint("✅ Anon sign-in: ${u.uid}");
+  return u;
 }
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  debugPrint("🔥 Starting Firebase init...");
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  debugPrint("✅ Firebase init done!");
 
-  await ensureUserSignedIn();
-  runApp(const WorkoutLoggerApp());
+  // Create one global Analytics instance
+  final analytics = FirebaseAnalytics.instance;
+
+  // Ensure user signed in & analytics knows the UID
+  await ensureUserSignedIn(analytics);
+
+  runApp(WorkoutLoggerApp(analytics: analytics));
 }
 
 class WorkoutLoggerApp extends StatelessWidget {
-  const WorkoutLoggerApp({super.key});
+  final FirebaseAnalytics analytics;
+  final FirebaseAnalyticsObserver observer;
 
-  get yourDefaultExercise => null;
+  WorkoutLoggerApp({super.key, required this.analytics})
+    : observer = FirebaseAnalyticsObserver(
+        analytics: FirebaseAnalytics.instance,
+      );
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Overload Pro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
+      navigatorObservers: [observer], // ← auto-track screen views
       initialRoute: '/home',
       routes: {
         '/home': (_) => const HomeScreen(),
         '/settings': (_) => const SettingScreen(),
-        '/signup': (_) => const AuthScreen(), // new
-        // '/progress': (_) => const ProgressScreen(),
-        // '/progress': (_) => ProgressChartScreen(),
-        // '/calendar': (_) => CalendarScreen(),
-        // '/profile': (_) => ProfileScreen(),
+        '/signup': (_) => const AuthScreen(),
+        //'/progress': (_) => const ProgressScreen(),
       },
     );
   }
