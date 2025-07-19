@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:overload_pro_app/services/api_service.dart';
 import 'package:overload_pro_app/widgets/backUpData.dart';
 import 'package:overload_pro_app/widgets/bottom_nav_bar.dart';
@@ -134,21 +135,44 @@ class _SettingScreenState extends State<SettingScreen> {
           'About Overload Pro',
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Version 1.0.0',
               style: TextStyle(
                 color: Color(0xFF22FF7A),
                 fontWeight: FontWeight.w500,
               ),
             ),
-            SizedBox(height: 12),
-            Text(
+            const SizedBox(height: 12),
+            const Text(
               'Your ultimate workout tracking companion. Track your progress, create custom routines, and achieve your fitness goals.',
               style: TextStyle(color: Colors.white70, height: 1.4),
+            ),
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () async {
+                const url = 'https://www.overloadpro.app/privacy';
+                await Clipboard.setData(const ClipboardData(text: url));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Privacy Policy URL copied to clipboard!'),
+                      backgroundColor: Color(0xFF22FF7A),
+                    ),
+                  );
+                }
+              },
+              child: const Text(
+                'Privacy Policy\nhttps://www.overloadpro.app/privacy',
+                style: TextStyle(
+                  color: Color(0xFF22FF7A),
+                  decoration: TextDecoration.underline,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ],
         ),

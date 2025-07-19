@@ -1,10 +1,8 @@
-// DESIGN NOTE: Removed unused packages & fixed naming inconsistencies.
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:overload_pro_app/screens/log_workout_screen.dart';
-import 'package:overload_pro_app/screens/routine_progress_screen.dart';
 import 'package:overload_pro_app/services/firebasUpgrade.dart';
 import 'package:overload_pro_app/utils/usage_counter.dart';
 
@@ -397,15 +395,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   }
 
   /* --------------------------- NAVIGATION --------------------------- */
-  void _goToProgress() => Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => RoutineProgressScreen(
-        routineId: widget.routine.id,
-        routineName: widget.routine.name,
-      ),
-    ),
-  );
+
   void _goToLog(Exercise ex) => Navigator.push(
     context,
     MaterialPageRoute(builder: (_) => LogWorkoutScreen(exercise: ex)),

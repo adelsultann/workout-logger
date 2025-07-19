@@ -3,13 +3,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:firebase_analytics/observer.dart';
 
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
 import 'screens/settingScreen.dart';
-import 'screens/progress_screen.dart';
 
 Future<User> ensureUserSignedIn(FirebaseAnalytics analytics) async {
   final prefs = await SharedPreferences.getInstance();

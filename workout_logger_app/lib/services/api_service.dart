@@ -11,7 +11,10 @@ class ApiService {
   // static const baseUrl = 'http://10.0.2.2:5000/api';
 
   // real device
-  static const baseUrl = 'http://192.168.2.130:5000/api';
+  // static const baseUrl = 'http://192.168.2.130:5000/api';
+
+  //live deplyment backend
+  static const baseUrl = 'https://over-load-pro-backend.onrender.com/api';
 
   // 🔑 helper – returns headers with Authorization: Bearer <token>
   static Future<Map<String, String>> _authHeaders() async {
