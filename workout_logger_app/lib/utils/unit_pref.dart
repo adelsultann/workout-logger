@@ -11,7 +11,7 @@ class UnitPref {
   }
 
   static Future<WeightUnit> get() async {
-    // ← parameter-less
+    // Default to kilograms
     final prefs = await SharedPreferences.getInstance();
     final v = prefs.getString(_key) ?? WeightUnit.kg.name;
     return WeightUnit.values.firstWhere((e) => e.name == v);

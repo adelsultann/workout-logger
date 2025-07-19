@@ -8,10 +8,10 @@ import 'package:overload_pro_app/models/workout_log.dart';
 // … your models …
 
 class ApiService {
-  static const baseUrl = 'http://10.0.2.2:5000/api';
+  // static const baseUrl = 'http://10.0.2.2:5000/api';
 
   // real device
-  // static const baseUrl = 'http://192.168.2.130:5000/api';
+  static const baseUrl = 'http://192.168.2.130:5000/api';
 
   // 🔑 helper – returns headers with Authorization: Bearer <token>
   static Future<Map<String, String>> _authHeaders() async {

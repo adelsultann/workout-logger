@@ -1,7 +1,14 @@
 // middleware/firebaseAuth.js
 const admin = require('firebase-admin');
+
+//local 
+
+// const serviceAccount = require('../serviceAccount.json')
+
+//Render deployment 
+ const serviceAccount = require('/etc/secrets/serviceAccount.json');
 admin.initializeApp({
-  credential: admin.credential.cert(require('../serviceAccount.json')),
+  credential: admin.credential.cert(serviceAccount)
 });
 
 module.exports = async function (req, res, next) {

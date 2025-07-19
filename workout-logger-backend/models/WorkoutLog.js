@@ -10,5 +10,7 @@ const WorkoutLogSchema = new mongoose.Schema({
   notes: { type: String },
 });
 
+WorkoutLogSchema.index({ exerciseId: 1, date: -1 });
+
 
 module.exports = mongoose.model('WorkoutLog', WorkoutLogSchema);

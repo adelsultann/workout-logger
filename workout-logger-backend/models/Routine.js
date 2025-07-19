@@ -6,4 +6,6 @@ const RoutineSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+RoutineSchema.index({ userId: 1, name: 1 });
+
 module.exports = mongoose.model('Routine', RoutineSchema);

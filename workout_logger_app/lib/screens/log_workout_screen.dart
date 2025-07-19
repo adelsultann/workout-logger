@@ -48,6 +48,8 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
 
   Future<void> _initUnit() async {
     final u = await UnitPref.get();
+    // mounted property is part of the State class
+    //it checks if the state object is still in the tree so when user leaves the screen it does not throw an error
     if (mounted) setState(() => _unit = u);
   }
 
@@ -65,9 +67,11 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
   Future<void> _loadLogs() async {
     try {
       final data = await ApiService.getLogs(widget.exercise.id);
+      // sort the log list by date descending(from newest to oldest)
       data.sort((a, b) => b.date.compareTo(a.date));
       setState(() {
         _logs = data;
+        //if the list is not empty, set the last log
         _lastLog = data.isNotEmpty ? data.first : null;
         _showQuickFill = data.isNotEmpty;
         _isLoading = false;
@@ -83,6 +87,8 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
       _unit == WeightUnit.kg ? value : value / 2.20462;
   double _display(double kg) => _unit == WeightUnit.kg ? kg : kg * 2.20462;
 
+  /// Fill the form with the last workout log data. If there is no last log or
+
   void _quickFillLastWorkout() {
     if (_lastLog != null) {
       HapticFeedback.selectionClick();
@@ -97,6 +103,7 @@ class _LogWorkoutScreenState extends State<LogWorkoutScreen>
   }
 
   Future<void> _submitLog() async {
+    // if the form is not valid, return
     if (!_formKey.currentState!.validate()) return;
     HapticFeedback.lightImpact();
     setState(() => _isSaving = true);

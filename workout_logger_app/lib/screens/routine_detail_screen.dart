@@ -48,7 +48,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   /* --------------- UPGRADE DIALOG ----------------------- */
   void _maybeShowSignupDialog(BuildContext ctx) async {
     final firstLaunchCount = await UsageCounter.getExerciseCount();
-    if (firstLaunchCount < 1)
+    if (firstLaunchCount < 4)
       return; // adjust this as needed for selecting the proper time
 
     showDialog(
@@ -437,11 +437,7 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xFF22FF7A),
-        onPressed: _goToProgress,
-        child: const Icon(Icons.bar_chart, color: Colors.black),
-      ),
+
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : exercises.isEmpty

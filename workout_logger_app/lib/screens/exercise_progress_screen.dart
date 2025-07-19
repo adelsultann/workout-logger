@@ -13,10 +13,10 @@ class ExerciseProgressScreen extends StatefulWidget {
   final String exerciseName;
 
   const ExerciseProgressScreen({
-    Key? key,
+    super.key,
     required this.exerciseId,
     required this.exerciseName,
-  }) : super(key: key);
+  });
 
   @override
   State<ExerciseProgressScreen> createState() => _ExerciseProgressScreenState();
@@ -141,7 +141,6 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
     }
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -268,19 +267,36 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
   Widget _buildContent() {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildPeriodSelector(),
-            const SizedBox(height: 20),
-            _buildMetricToggle(),
-            const SizedBox(height: 20),
-            _buildStatsCard(),
-            const SizedBox(height: 20),
-            _buildChart(),
-          ],
+      child: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                20,
+                20,
+                MediaQuery.of(context).padding.bottom + 20,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 40,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildPeriodSelector(),
+                    const SizedBox(height: 20),
+                    _buildMetricToggle(),
+                    const SizedBox(height: 15),
+                    _buildStatsCard(),
+                    const SizedBox(height: 15),
+                    _buildChart(constraints),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -401,12 +417,15 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
               size: 18,
             ),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? Colors.black : Colors.white70,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                fontSize: 14,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isSelected ? Colors.black : Colors.white70,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  fontSize: 14,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -460,12 +479,15 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
                 size: 24,
               ),
               const SizedBox(width: 12),
-              Text(
-                'Current ${_showWeight ? 'Weight' : 'Reps'}',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              Expanded(
+                child: Text(
+                  'Current ${_showWeight ? 'Weight' : 'Reps'}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -474,23 +496,36 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                endValue.toStringAsFixed(_showWeight ? 1 : 0),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        endValue.toStringAsFixed(_showWeight ? 1 : 0),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        _showWeight ? _getUnitLabel() : 'reps',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: 8),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Text(
-                  _showWeight ? _getUnitLabel() : 'reps',
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
-                ),
-              ),
-              const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -543,8 +578,22 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
     );
   }
 
-  Widget _buildChart() {
+  Widget _buildChart(BoxConstraints constraints) {
     if (_filteredLogs.isEmpty) return const SizedBox();
+
+    // Calculate responsive chart height based on available space
+    final screenHeight = MediaQuery.of(context).size.height;
+    final appBarHeight = AppBar().preferredSize.height;
+    final statusBarHeight = MediaQuery.of(context).padding.top;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    // Calculate used space by other widgets (approximate)
+    final usedSpace =
+        statusBarHeight + appBarHeight + 200; // Controls + stats card + padding
+    final availableSpace = screenHeight - usedSpace - bottomPadding;
+
+    // Chart height should be between 250 and 400, but respect available space
+    final chartHeight = (availableSpace * 0.6).clamp(250.0, 400.0);
 
     final spots = _filteredLogs.asMap().entries.map((entry) {
       final value = _showWeight
@@ -570,7 +619,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
 
     return Container(
       padding: const EdgeInsets.all(16),
-      height: 420,
+      height: chartHeight,
       decoration: BoxDecoration(
         color: const Color(0xFF1C1C1E),
         borderRadius: BorderRadius.circular(16),
@@ -578,6 +627,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Progress Chart',
@@ -612,7 +662,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 20,
+                      reservedSize: 32,
                       interval: intervalX.toDouble(),
                       getTitlesWidget: (value, meta) {
                         final index = value.toInt();
@@ -629,6 +679,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
                               color: Colors.white60,
                               fontSize: 10,
                             ),
+                            textAlign: TextAlign.center,
                           ),
                         );
                       },
@@ -637,7 +688,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
                   leftTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 30,
+                      reservedSize: 40,
                       interval: (maxY - minY) / 4,
                       getTitlesWidget: (value, meta) => Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -647,6 +698,7 @@ class _ExerciseProgressScreenState extends State<ExerciseProgressScreen>
                             color: Colors.white60,
                             fontSize: 10,
                           ),
+                          textAlign: TextAlign.right,
                         ),
                       ),
                     ),
