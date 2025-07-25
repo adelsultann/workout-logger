@@ -5,7 +5,7 @@
 > **سجل كل جلسة تدريب، وارفع أوزانك في الوقت المناسب، وشاهد تطوّر قوتك لحظة بلحظة.**
 
 
-![alt]("workout_logger_app/assets/Recording%202025-07-25%20201838.gif")
+![alt]("./workout_logger_app/assets/Recording%202025-07-25%20201838.gif")
 
 ---
 
