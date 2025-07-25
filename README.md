@@ -2,7 +2,7 @@
 ## offical website https://www.overloadpro.app/
 
 > **Log every set, add plates at the right time, and watch your strength curve climb.**  
-> **سجل كل جلسة تدريب، وارفع أوزانك في الوقت المناسب، وشاهد تطوّر قوتك لحظة بلحظة.**
+> **تابع تطورك في التدريب وسجل كل سجل لتقيس مدى تطورك في اداء التمارين بشكل سهل وبسيط.**
 
 
 <img src="workout_logger_app/assets/1753019953245.jpg" alt="Workout Logger App Recording" width="200">
