@@ -21,7 +21,7 @@ router.post('/', async (req, res) => {
 router.get('/:routineId', async (req, res) => {
   try {
     const { routineId } = req.params;
-    const exercises = await Exercise.find({ routineId });
+    const exercises = await Exercise.find({ routineId }).sort({ order_position: 1 });
     res.status(200).json(exercises);
   } catch (err) {
     res.status(500).json({ error: 'Failed to get exercises' });
