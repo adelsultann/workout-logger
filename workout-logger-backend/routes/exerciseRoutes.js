@@ -55,6 +55,29 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+router.put('/:routineId/reorder', async (req, res) => {
+  try {
+    const { routineId } = req.params;
+    const { exercises } = req.body;
+
+    if (!Array.isArray(exercises)) {
+      return res.status(400).json({ error: 'Exercises must be an array' });
+    }
+
+    for (const exercise of exercises) {
+      await Exercise.updateOne(
+        { _id: exercise.exerciseId, routineId: routineId },
+        { $set: { order_position: exercise.order } }
+      );
+    }
+
+    res.status(200).json({ message: 'Exercise order updated successfully' });
+  } catch (error) {
+    console.error(error); // log actual error for debugging
+    res.status(500).json({ error: 'Failed to update exercise order' });
+  }
+});
+
 // // Delete an exercise by ID
 // router.delete('/:id', async (req, res) => {
 //      try {

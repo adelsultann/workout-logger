@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:overload_pro_app/screens/home_screen.dart';
+import 'package:overload_pro_app/screens/settingScreen.dart';
 import 'package:overload_pro_app/utils/usage_counter.dart';
 
 /* ───────────────────────────────── AuthScreen ─────────────────────────────── */
@@ -52,9 +53,9 @@ class _AuthScreenState extends State<AuthScreen> {
         await _upgradeAnonymous(email, pass); // one-time upgrade
       }
       if (!mounted) return;
-      Navigator.push(
+      Navigator.pushReplacementNamed(
         context,
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        '/home', // Use your actual route name for SettingScreen
       );
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

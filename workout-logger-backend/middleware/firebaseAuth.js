@@ -7,6 +7,8 @@ const admin = require('firebase-admin');
 
 //Render deployment 
  const serviceAccount = require('/etc/secrets/serviceAccount.json');
+
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });

@@ -5,7 +5,8 @@ const ExerciseSchema = new mongoose.Schema({
   name: { type: String, required: true },
     userId:    { type: String, required: true }, 
   totalSets:{ type: Number, required: true },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+    order_position: { type: Number, default: 0 }, 
 });
 ExerciseSchema.index({ routineId: 1, name: 1 });
 module.exports = mongoose.model('Exercise', ExerciseSchema);

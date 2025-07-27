@@ -95,6 +95,35 @@ class ApiService {
     if (res.statusCode != 200) throw Exception('Failed to delete exercise');
   }
 
+  static Future<void> updateExerciseOrder(
+    String routineId,
+    List<Exercise> exercises,
+  ) async {
+    // Create a list of exercise IDs in their new order
+    final exerciseOrder = exercises
+        .asMap()
+        .entries
+        .map(
+          (entry) => {
+            'exerciseId': entry.value.id,
+            'order': entry.key, // 0-based index as the new order
+          },
+        )
+        .toList();
+
+    final res = await http.put(
+      Uri.parse('$baseUrl/exercises/$routineId/reorder'),
+      headers: await _authHeaders(),
+      body: jsonEncode({'exercises': exerciseOrder}),
+    );
+
+    if (res.statusCode != 200) {
+      print(res.body);
+      print(res.statusCode);
+
+      throw Exception('Failed to update exercise orderrr');
+    }
+  }
   /* ---------- LOGS ---------- */
 
   // 🔔 NOTE: backend route is /logs/exercise/:id

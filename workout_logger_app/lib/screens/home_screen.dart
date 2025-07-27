@@ -98,7 +98,7 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Color(0xFF1C1C1E),
         elevation: 0,
         title: Text(
-          'Welcome back, Adel',
+          'Welcome back',
           style: GoogleFonts.inter(color: Colors.white),
         ),
       ),

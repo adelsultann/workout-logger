@@ -20,6 +20,7 @@ class RoutineDetailScreen extends StatefulWidget {
 class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
   List<Exercise> exercises = [];
   bool isLoading = true;
+  bool isReorderMode = false;
 
   @override
   void initState() {
@@ -41,6 +42,48 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
       debugPrint('Error loading exercises: $e');
       if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  /* -------------------- Reorder exercises -------------- */
+  void _onReorder(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final item = exercises.removeAt(oldIndex);
+      exercises.insert(newIndex, item);
+    });
+
+    // Optional: Call API to save the new order
+    _saveExerciseOrder();
+  }
+
+  /* -------------------- Save exercise order ------------ */
+  Future<void> _saveExerciseOrder() async {
+    try {
+      await ApiService.updateExerciseOrder(widget.routine.id, exercises);
+      print(widget.routine.id);
+      print(exercises[0].id);
+      debugPrint('Exercise order updated successfully');
+    } catch (e) {
+      debugPrint('Failed to save exercise order: $e');
+      // Optionally show a snackbar to inform the user
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to save exercise order'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  /* -------------------- Toggle reorder mode ------------ */
+  void _toggleReorderMode() {
+    setState(() {
+      isReorderMode = !isReorderMode;
+    });
   }
 
   /* --------------- UPGRADE DIALOG ----------------------- */
@@ -421,8 +464,17 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
           ),
         ),
         actions: [
+          if (exercises.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                isReorderMode ? Icons.check : Icons.reorder,
+                color: isReorderMode ? const Color(0xFF22FF7A) : Colors.white,
+              ),
+              onPressed: _toggleReorderMode,
+              tooltip: isReorderMode ? 'Done' : 'Reorder exercises',
+            ),
           IconButton(
-            icon: const Icon(Icons.add),
+            icon: const Icon(Icons.add, color: Colors.white),
             onPressed: _showAddExerciseDialog,
           ),
         ],
@@ -437,6 +489,20 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                 style: TextStyle(color: Colors.white54),
               ),
             )
+          : isReorderMode
+          ? ReorderableListView(
+              padding: const EdgeInsets.all(16),
+              onReorder: _onReorder,
+              children: exercises.asMap().entries.map((entry) {
+                final index = entry.key;
+                final exercise = entry.value;
+                return _ReorderableExerciseCard(
+                  key: ValueKey(exercise.id),
+                  exercise: exercise,
+                  index: index,
+                );
+              }).toList(),
+            )
           : ListView.builder(
               padding: const EdgeInsets.all(16),
               itemCount: exercises.length,
@@ -449,6 +515,61 @@ class _RoutineDetailScreenState extends State<RoutineDetailScreen> {
                 },
               ),
             ),
+    );
+  }
+}
+
+/* --------------------------- REORDERABLE EXERCISE CARD WIDGET --------------------------- */
+class _ReorderableExerciseCard extends StatelessWidget {
+  final Exercise exercise;
+  final int index;
+
+  const _ReorderableExerciseCard({
+    super.key,
+    required this.exercise,
+    required this.index,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: ValueKey(exercise.id),
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: Card(
+        color: const Color(0xFF2C2C2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: ListTile(
+          title: Text(
+            exercise.name,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          subtitle: Text(
+            'Total Sets: ${exercise.totalSets}',
+            style: const TextStyle(color: Colors.white70),
+          ),
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF22FF7A).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${index + 1}',
+              style: const TextStyle(
+                color: Color(0xFF22FF7A),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          trailing: ReorderableDragStartListener(
+            index: index,
+            child: const Icon(Icons.drag_handle, color: Color(0xFF8A9B8A)),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -506,6 +627,7 @@ class _ExerciseCard extends StatelessWidget {
       child: Card(
         color: const Color(0xFF2C2C2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.symmetric(vertical: 6),
         child: ListTile(
           onTap: onTap,
           title: Text(
