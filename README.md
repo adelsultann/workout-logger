@@ -4,6 +4,10 @@ A full-stack workout logging app:
 - **Mobile app:** Flutter (`/workout_logger_app`)
 - **Backend API:** Node.js (`/workout-logger-backend`)
 
+
+
+![Workout Logger Screenshot](assets/screenshot01.png)
+
 ## Repo Structure
 - `workout_logger_app/` — Flutter mobile app
 - `workout-logger-backend/` — Node.js backend API
@@ -33,3 +37,9 @@ npm start
 cd workout_logger_app
 flutter pub get
 flutter run
+
+
+---
+![Workout Logger Screenshot](assets/screenshot02.png)
+![Workout Logger Screenshot](assets/screenshot03.png)
+
